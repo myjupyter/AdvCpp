@@ -1,11 +1,11 @@
-#ifndef PROCESS_H
-#define PROCESS_H
+#ifndef PROCESS_H_
+#define PROCESS_H_
 
 #include <string>
 
 namespace process {
 
-enum DescStat {IS_CLOSED = 0, IS_OPENED};
+enum class DescStat {IS_CLOSED = 0, IS_OPENED};
 
 class Process {
     public:
@@ -20,6 +20,8 @@ class Process {
         bool isReadable() const;
         bool isWritable() const;
         void closeStdin();
+
+        pid_t wait() const;
 
         void close();
         
@@ -36,7 +38,7 @@ class Process {
         DescStat proc_stdin_stat_;
 };
 
-};  // namespace process
+}  // namespace process
 
-#endif  //PROCESS_H
+#endif  //PROCESS_H_
 

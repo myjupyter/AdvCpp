@@ -12,10 +12,14 @@ namespace process {
 
 Process::Process(const std::string& path) {
     
-    int pipe1[2] = {-1, -1};
-    int pipe2[2] = {-1, -1};
-    if (pipe(pipe1) < 0 || 
-        pipe(pipe2) < 0) {
+    int pipe1[2];
+    int pipe2[2];
+    if (pipe(pipe1) < 0) { 
+        throw std::runtime_error(std::strerror(errno));
+    }
+    if (pipe(pipe2) < 0) {
+        ::close(pipe1[0]);
+        ::close(pipe1[1]);
         throw std::runtime_error(std::strerror(errno));
     }
     
@@ -39,13 +43,7 @@ Process::Process(const std::string& path) {
         ::close(child_read);
         ::close(child_write);
 
-        stdin = fdopen(STDIN_FILENO, "r");
-        stdout = fdopen(STDOUT_FILENO, "w");
-        if (stdin == NULL || stdout == NULL) {
-            throw std::runtime_error(std::strerror(errno));
-        }
-
-        char* args[2] = {(char*) path.c_str(), NULL};        
+        char* args[2] = {const_cast<char*>(path.c_str()), NULL};        
         if (execv(args[0], args) == -1) {
             throw std::runtime_error(std::strerror(errno));
         }
@@ -62,10 +60,8 @@ Process::Process(const std::string& path) {
 }
 
 Process::~Process() {
-    this->close(); 
-    if (isWorking()) {
-        kill(proc_pid_, SIGKILL); 
-    }
+    close(); 
+    wait();
 }
 
 std::size_t Process::write(const void* data, std::size_t len) {
@@ -81,8 +77,16 @@ std::size_t Process::write(const void* data, std::size_t len) {
 }
 
 void Process::writeExact(const void* data, std::size_t len) {
-    if (len != this->write(data, len)) {
-        throw std::runtime_error("Not all bytes were sent");
+    std::size_t rest = 0;
+    std::size_t old_rest = 0;
+
+    while (rest != len) {
+        old_rest = rest;
+        rest += write(static_cast<const char*>(data) + rest, len - rest);
+        if ((rest - old_rest) == 0) {
+            throw std::runtime_error(std::to_string(rest) + \
+                    "/" + std::to_string(len) + " bytes were sent");
+        }
     }
 }
  
@@ -101,22 +105,35 @@ std::size_t Process::read(void* data, std::size_t len) {
 }
 
 void Process::readExact(void* data, std::size_t len) {
-    if (len != this->read(data, len)) {
-        throw std::runtime_error("Not all bytes were recieved");
+    std::size_t rest = 0;
+    std::size_t old_rest = 0;
+
+    while (rest != len) {
+        old_rest = rest;
+        rest += read(static_cast<char*>(data) + rest, len - rest);
+        if ((rest - old_rest) == 0) {
+            throw std::runtime_error(std::to_string(rest) + \
+                    "/" + std::to_string(len) + " bytes were received");
+        }
     }
 }
 
 bool Process::isReadable() const {
-    return static_cast<bool>(proc_stdout_stat_);
+    return proc_stdout_stat_ == DescStat::IS_OPENED;
 }
 
 bool Process::isWritable() const {
-    return static_cast<bool>(proc_stdin_stat_);
+    return proc_stdin_stat_ == DescStat::IS_OPENED;
 }
 
 void Process::closeStdin() {
     ::close(proc_stdin_);
     proc_stdin_stat_ = DescStat::IS_CLOSED;
+}
+
+pid_t Process::wait() const {
+    int status = -1;
+    return ::wait(&status);
 }
 
 void Process::close() {
@@ -136,4 +153,4 @@ bool Process::isWorking() const {
     return false;
 }
 
-};  // namespace process
+}  // namespace process

@@ -2,6 +2,7 @@
 
 #include "process.h"
 
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         std::string arg(argv[0]);
@@ -9,18 +10,19 @@ int main(int argc, char *argv[]) {
     } 
     try {
         process::Process proc(argv[1]);
-   
-     
-        std::cout << proc.write("asfd", 4) << std::endl;
-        std::cout << proc.write("asfd", 4) << std::endl;
-        std::cout << proc.write("asfd", 4) << std::endl;
-        std::cout << proc.write("asfd", 4) << std::endl;
-        std::cout << proc.write("asfd", 4) << std::endl;
 
-        char buffer[100] = {};
-
-        proc.readExact(buffer, 20);
-        std::cout << buffer << std::endl;
+        while (proc.isWorking()) {
+            std::string s;
+            std::cin >> s;
+            
+            proc.writeExact(s.c_str(), s.size());
+            
+            char *buffer = new char[s.size() + 1];
+            proc.readExact(buffer, s.size());
+            std::cout << buffer << std::endl;
+            
+            delete[] buffer;
+        }
 
     } catch (std::runtime_error& err) {
         std::cout << err.what() << std::endl;
