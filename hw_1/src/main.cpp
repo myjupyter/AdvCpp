@@ -1,33 +1,43 @@
 #include <iostream> 
+#include <vector>
 
 #include "process.h"
 
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        std::string arg(argv[0]);
-        throw std::invalid_argument(arg + " {path to bin file}");
-    } 
     try {
-        process::Process proc(argv[1]);
+        if (argc < 2) {
+            std::string arg(argv[0]);
+            throw std::invalid_argument("Should be: " + arg + " {path to bin file}");
+        } 
 
-        while (proc.isWorking()) {
-            std::string s;
+        std::vector<std::string> args(argc - 1);
+        for (int i = 1; i < argc; ++i) {
+            args[i - 1] = argv[i];
+        }    
+
+        process::Process proc(args);
+
+        std::string s("0xdeadbeef");
+
+        while (proc.isWorking() && !s.empty()) {
+            s.clear();
             std::cin >> s;
             
+            std::vector<char> vec(s.size());
+           
             proc.writeExact(s.c_str(), s.size());
-            
-            char *buffer = new char[s.size() + 1];
-            proc.readExact(buffer, s.size());
-            std::cout << buffer << std::endl;
-            
-            delete[] buffer;
+            proc.read(vec.data(), vec.size());
+             
+            std::cout << vec.data() << std::endl;    
         }
 
     } catch (std::runtime_error& err) {
         std::cout << err.what() << std::endl;
         return -1;
+    } catch (std::invalid_argument& err) {
+        std::cout << err.what() << std::endl;
+        return -2;
     }
-
     return 0;
 }
