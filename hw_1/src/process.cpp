@@ -116,9 +116,12 @@ Process::Process(const std::vector<std::string>& args) {
 }
 
 Process::~Process() {  
-    int status = -1;   
-    wait(status, WEXITED);
     close();
+    if (isWorking()) {
+        int status = -1;   
+        ::kill(proc_pid_, SIGTERM);
+        wait(status, WEXITED);
+    }
 }
 
 std::size_t Process::write(const void* data, std::size_t len) {

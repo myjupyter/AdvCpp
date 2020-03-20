@@ -4,7 +4,7 @@
 #include "process.h"
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) { 
     try {
         if (argc < 2) {
             std::string arg(argv[0]);
@@ -19,19 +19,19 @@ int main(int argc, char *argv[]) {
         process::Process proc(args);
 
         std::string s("0xdeadbeef");
-
         while (proc.isWorking() && !s.empty()) {
             s.clear();
             std::cin >> s;
             
             std::vector<char> vec(s.size());
-           
+
             proc.writeExact(s.c_str(), s.size());
             proc.read(vec.data(), vec.size());
-             
+
+            vec.push_back('\0');            
             std::cout << vec.data() << std::endl;    
         }
-
+    
     } catch (std::runtime_error& err) {
         std::cout << err.what() << std::endl;
         return -1;
