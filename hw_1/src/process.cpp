@@ -11,57 +11,9 @@
 #include <iostream>
 
 namespace process {
-
-Process::Process(const std::string& path) {
-    
-    int pipe1[2];
-    int pipe2[2];
-    if (pipe(pipe1) < 0) { 
-        throw std::runtime_error(std::strerror(errno));
-    }
-    if (pipe(pipe2) < 0) {
-        ::close(pipe1[0]);
-        ::close(pipe1[1]);
-        throw std::runtime_error(std::strerror(errno));
-    }
-    
-    int parent_write = pipe1[1];
-    int child_read = pipe1[0];
-
-    int child_write = pipe2[1];
-    int parent_read = pipe2[0];
-
-    proc_pid_ = fork();
-    if (proc_pid_ < 0) {
-        throw std::runtime_error(std::strerror(errno));
-    } else if (proc_pid_ == 0) {
-        ::close(parent_write);
-        ::close(parent_read);
-
-        if (dup2(child_read, STDIN_FILENO) == -1 ||
-            dup2(child_write, STDOUT_FILENO) == -1) {
-            throw std::runtime_error(std::strerror(errno));
-        }
-        ::close(child_read);
-        ::close(child_write);
-
-        char* args[2] = {const_cast<char*>(path.c_str()), NULL};        
-        if (execv(args[0], args) == -1) {
-            throw std::runtime_error(std::strerror(errno));
-        }
-    } else if (proc_pid_ > 0) {
-        ::close(child_read);
-        ::close(child_write);
-
-        proc_stdin_ = parent_write;
-        proc_stdout_ = parent_read;
-
-        proc_stdin_stat_ = DescStat::IS_OPENED;
-        proc_stdout_stat_ = DescStat::IS_OPENED;
-    }
-}
-    
-Process::Process(const std::vector<std::string>& args) {
+ 
+Process::Process(const std::string& path,
+                 const std::vector<std::string> args) {
 
     int pipe1[2];
     int pipe2[2];
@@ -94,13 +46,15 @@ Process::Process(const std::vector<std::string>& args) {
         ::close(child_read);
         ::close(child_write);
 
-        char** argv = static_cast<char**>(calloc(args.size() + 1, sizeof(char*)));
-        for (int i = 0; i < args.size(); ++i) {
-            argv[i] = strdup(args[i].c_str());
+        std::vector<std::string> args_copy(args);
+        std::vector<char*> argv;
+        argv.push_back(const_cast<char*>(path.c_str()));
+        for (std::string& arg: args_copy) {
+            argv.push_back(const_cast<char*>(arg.c_str()));
         }
-        argv[args.size()] = NULL;
+        argv.push_back(nullptr);
 
-        if (execv(argv[0], argv) == -1) {
+        if (execv(argv[0], argv.data()) == -1) {
             throw std::runtime_error(std::strerror(errno));
         }
     } else if (proc_pid_ > 0) {
@@ -155,7 +109,7 @@ std::size_t Process::read(void* data, std::size_t len) {
         return 0;
     }
 
-    int bytes = ::read(proc_stdout_, data, len);
+    ssize_t bytes = ::read(proc_stdout_, data, len);
     if (bytes == -1) {
         throw std::runtime_error(std::strerror(errno));
     } else if (bytes == 0) {

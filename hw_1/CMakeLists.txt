@@ -14,11 +14,6 @@ set(LIB_DIR ${PRJ_DIR}/lib)
 set(LIB_NAME Process)
 set(TARGET_NAME prog.out)
 
-file(MAKE_DIRECTORY ${LIB_DIR})
-file(WRITE ${LIB_DIR}/CMakeLists.txt "add_library(${LIB_NAME} SHARED ${SRC_DIR}/process.cpp)\n"
-                                     "target_include_directories(${LIB_NAME} PUBLIC ${INC_DIR})\n"
-                                     "target_link_options(${LIB_NAME} PUBLIC -g3)")
-
 add_subdirectory(${LIB_DIR})
 
 set(SRCS ${SRC_DIR}/main.cpp)

@@ -11,12 +11,12 @@ int main(int argc, char *argv[]) {
             throw std::invalid_argument("Should be: " + arg + " {path to bin file}");
         } 
 
-        std::vector<std::string> args(argc - 1);
-        for (int i = 1; i < argc; ++i) {
-            args[i - 1] = argv[i];
+        std::vector<std::string> args(argc - 2);
+        for (int i = 2; i < argc; ++i) {
+            args[i - 2] = argv[i];
         }    
 
-        process::Process proc(args);
+        process::Process proc(argv[1], args);
 
         std::string s("0xdeadbeef");
         while (proc.isWorking() && !s.empty()) {
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
             std::vector<char> vec(s.size());
 
             proc.writeExact(s.c_str(), s.size());
-            proc.read(vec.data(), vec.size());
+            proc.readExact(vec.data(), vec.size());
 
             vec.push_back('\0');            
             std::cout << vec.data() << std::endl;    

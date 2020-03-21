@@ -13,8 +13,8 @@ class Process {
         Process(const Process& proc) = delete;
         Process& operator=(const Process& proc) = delete;
 
-        explicit Process(const std::string& path);
-        explicit Process(const std::vector<std::string>& args);
+        explicit Process(const std::string& path,
+                         const std::vector<std::string> args = {});
         ~Process();
 
         std::size_t write(const void* data, std::size_t len);

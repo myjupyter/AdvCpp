@@ -1,6 +1,7 @@
 *.out
+*.so
+
 CMakeCache.txt
 cmake_install.cmake 
 CMakeFiles/
 Makefile
-lib/
