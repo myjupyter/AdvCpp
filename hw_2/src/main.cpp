@@ -1,21 +1,17 @@
-#include <iostream>
-#include <fstream>
-
-#include "stdout_logger.h"
-#include "stderr_logger.h"
-#include "file_logger.h"
+#include <stdout_logger.h>
+#include <stderr_logger.h>
+#include <file_logger.h>
+#include <logger.h>
 
 int main(int argc, char* argv[]) {
-    
-    std::string filename("info");
 
-    Log::FileLogger logger(filename);
-    logger.set_level(Log::Level::WARNING);
+    Log::Logger& log = Log::Logger::getInstance();
+    log.setGlobalLogger(new Log::StderrLogger());
+    log.getGlobalLogger()->set_level(Log::Level::INFO);
 
-    logger.debug("Debug");
-    logger.info("Info");
-    logger.warn("Warn");
-    logger.error("Error");
-
+    log.getGlobalLogger()->debug("The debug message");
+    log.getGlobalLogger()->info("The info message");
+    log.getGlobalLogger()->warn("The warning message");
+    log.getGlobalLogger()->error("The error message");
     return 0;
 }
