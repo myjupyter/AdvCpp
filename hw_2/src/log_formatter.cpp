@@ -5,7 +5,7 @@
 
 std::map<Log::Level, std::string> COLOR {
     {Log::Level::DEBUG, std::string(ANSI_COLOR_GREEN)},
-    {Log::Level::INFO, std::string()},
+    {Log::Level::INFO, std::string(ANSI_COLOR_WHITE)},
     {Log::Level::WARNING, std::string(ANSI_COLOR_YELLOW)},
     {Log::Level::ERROR, std::string(ANSI_COLOR_RED)},
 };
