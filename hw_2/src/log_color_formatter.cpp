@@ -12,7 +12,7 @@
 #define ANSI_COLOR_RED     "\x1b[1;31m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
-std::map<Log::Level, std::string> COLOR {
+static std::map<Log::Level, const std::string> COLOR {
     {Log::Level::DEBUG, std::string(ANSI_COLOR_GREEN)},
     {Log::Level::INFO, std::string(ANSI_COLOR_WHITE)},
     {Log::Level::WARNING, std::string(ANSI_COLOR_YELLOW)},

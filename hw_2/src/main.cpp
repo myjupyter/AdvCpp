@@ -1,7 +1,6 @@
 #include <global_log_func.h>
 
 int main(int argc, char* argv[]) {
-
     Log::Logger& log = Log::Logger::getInstance();
     log.setGlobalLogger(Log::create_file_logger("Logging"));
 
