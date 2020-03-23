@@ -2,21 +2,9 @@
 
 #include <iomanip>
 #include <ctime>
+#include <map>
 
-std::map<Log::Level, std::string> COLOR {
-    {Log::Level::DEBUG, std::string(ANSI_COLOR_GREEN)},
-    {Log::Level::INFO, std::string(ANSI_COLOR_WHITE)},
-    {Log::Level::WARNING, std::string(ANSI_COLOR_YELLOW)},
-    {Log::Level::ERROR, std::string(ANSI_COLOR_RED)},
-};
-
-std::map<Log::Level, std::string> LEVEL {
-    {Log::Level::DEBUG, std::string(DEBUG_STR)},
-    {Log::Level::INFO, std::string(INFO_STR)},
-    {Log::Level::WARNING, std::string(WARNING_STR)},
-    {Log::Level::ERROR, std::string(ERROR_STR)},
-};
-
+#define TIME_FORMAT "%c"
 
 namespace Log {
 
@@ -29,12 +17,20 @@ std::ostream& operator<<(std::ostream& os, const LogFormatter& formatter) {
     std::time_t t = std::time(nullptr);
     std::tm tm = *std::localtime(&t);
 
-    os << "[" << formatter.level() << " " << std::put_time(&tm, TIME_FORMAT) << "]: "<< formatter.message();
+    os << "[" << formatter.getLevel() << " " << std::put_time(&tm, TIME_FORMAT) << "]: "<< formatter.getMessage();
     return os;
 }
 
-std::string LogFormatter::level() const {
-    return COLOR[level_] + LEVEL[level_] + std::string(ANSI_COLOR_RESET);
+std::string LogFormatter::getLevel() const {
+    return LEVEL[level()];
+}
+
+std::string LogFormatter::getMessage() const {
+    return message();
+}
+
+Level LogFormatter::level() const {
+    return level_;
 }
 
 std::string LogFormatter::message() const {

@@ -1,17 +1,15 @@
-#include <stdout_logger.h>
-#include <stderr_logger.h>
-#include <file_logger.h>
-#include <logger.h>
+#include <global_log_func.h>
 
 int main(int argc, char* argv[]) {
 
     Log::Logger& log = Log::Logger::getInstance();
-    log.setGlobalLogger(new Log::StderrLogger());
-    log.getGlobalLogger()->set_level(Log::Level::INFO);
+    log.setGlobalLogger(Log::create_file_logger("Logging"));
 
-    log.getGlobalLogger()->debug("The debug message");
-    log.getGlobalLogger()->info("The info message");
-    log.getGlobalLogger()->warn("The warning message");
-    log.getGlobalLogger()->error("The error message");
+    Log::debug("aksldjflaksjdf");
+    Log::debug("aksldjflaksjdf");
+    Log::debug("aksldjflaksjdf");
+    
+    Log::error("aksjdf");
+    Log::error("asdfalskdfj");
     return 0;
 }

@@ -29,7 +29,10 @@ void FileLogger::flush() {
 }
 
 void FileLogger::log(const std::string& msg, Level lvl) {
-    file_ << LogFormatter(msg, lvl) << std::endl;
+    if (level() <= lvl) {
+        file_ << LogFormatter(msg, lvl) << std::endl;
+        flush();
+    }
 }
 
 } // namespace Log

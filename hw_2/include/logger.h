@@ -3,18 +3,18 @@
 
 #include <memory>
 
-#include <base_logger.h>
+#include <stdout_logger.h>
 
 namespace Log {
 
-using GlobalLogger = std::shared_ptr<BaseLogger>;
+using GlobalLogger = std::unique_ptr<BaseLogger>;
 
 class Logger {
     public:
         
         static Logger& getInstance();
-        GlobalLogger getGlobalLogger();
-        void setGlobalLogger(BaseLogger* logger);
+        GlobalLogger& getGlobalLogger();
+        void setGlobalLogger(GlobalLogger&& logger);
 
         Logger(const Logger& logger) = delete;
         Logger& operator=(const Logger& logger) = delete;        
@@ -22,7 +22,7 @@ class Logger {
         ~Logger() = default;
 
     private:
-        Logger() = default;
+        Logger();
         
         GlobalLogger global_logger_;        
 };

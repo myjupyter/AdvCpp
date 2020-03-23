@@ -1,8 +1,8 @@
-#include "stderr_logger.h"
+#include <stderr_logger.h>
 
 #include <iostream>
 
-#include "log_formatter.h"
+#include <log_color_formatter.h>
 
 namespace Log {
 
@@ -15,7 +15,10 @@ void StderrLogger::flush() {
 }
 
 void StderrLogger::log(const std::string& msg, Level lvl) {
-    std::cerr << LogFormatter(msg, lvl) << std::endl;
+    if (level() <= lvl) {
+        std::cerr << LogColorFormatter(msg, lvl) << std::endl;
+        flush();
+    }
 }
 
 } // namespace Log

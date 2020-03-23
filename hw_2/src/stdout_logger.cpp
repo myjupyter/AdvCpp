@@ -1,8 +1,8 @@
-#include "stdout_logger.h"
+#include <stdout_logger.h>
 
 #include <iostream>
 
-#include "log_formatter.h"
+#include <log_color_formatter.h>
 
 namespace Log {
 
@@ -15,7 +15,10 @@ void StdoutLogger::flush() {
 }
 
 void StdoutLogger::log(const std::string& msg, Level lvl) {
-    std::cout << LogFormatter(msg, lvl) << std::endl;
+    if (level() <= lvl) {
+        std::cout << LogColorFormatter(msg, lvl) << std::endl;
+        flush();
+    }
 }
 
 } // namespace Log

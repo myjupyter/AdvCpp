@@ -8,27 +8,19 @@ BaseLogger::BaseLogger()
 BaseLogger::~BaseLogger() {}
 
 void BaseLogger::debug(const std::string& msg) {
-    if (level() <= Level::DEBUG) {
-        log(msg, Level::DEBUG);
-    }    
+    log(msg, Level::DEBUG);
 }
 
 void BaseLogger::info(const std::string& msg) {
-    if (level() <= Level::INFO) {
-        log(msg, Level::INFO);
-    }    
+    log(msg, Level::INFO);
 }
         
 void BaseLogger::warn(const std::string& msg) {
-    if (level() <= Level::WARNING) {
-        log(msg, Level::WARNING);
-    }    
+    log(msg, Level::WARNING);
 }
         
 void BaseLogger::error(const std::string& msg) {
-    if (level() <= Level::ERROR) {
-        log(msg, Level::ERROR);
-    }    
+    log(msg, Level::ERROR);
 }
 
 void BaseLogger::set_level(Level lvl) {

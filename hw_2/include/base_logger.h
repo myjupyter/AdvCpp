@@ -3,9 +3,9 @@
 
 #include <string>
 
-namespace Log {
+#include <common.h>
 
-enum class Level {DEBUG, INFO, WARNING, ERROR};
+namespace Log {
 
 class BaseLogger {
     public:
@@ -20,6 +20,8 @@ class BaseLogger {
 
         void set_level(Level lvl);
         Level level() const;
+
+
 
         virtual void flush();
 
