@@ -12,7 +12,9 @@ GlobalLogger& Logger::getGlobalLogger() {
 }
 
 void Logger::setGlobalLogger(GlobalLogger&& logger) {
+    lockMut();
     global_logger_ = std::move(logger);
+    unlockMut();
 }
 
 Logger::Logger()

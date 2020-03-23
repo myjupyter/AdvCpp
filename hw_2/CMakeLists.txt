@@ -20,5 +20,9 @@ set(SRCS ${SRC_DIR}/main.cpp)
 
 add_executable(${TARGET_NAME} ${SRCS})
 
-target_link_libraries(${TARGET_NAME} LINK_PUBLIC ${LIB_NAME})
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
+target_link_libraries(${TARGET_NAME} LINK_PUBLIC ${LIB_NAME}
+                                                 Threads::Threads)
 target_include_directories(${TARGET_NAME} PUBLIC ${LIB_DIR})

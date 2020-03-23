@@ -4,12 +4,12 @@
 #include <string>
 
 #include <common.h>
+#include <thread_safety.h>
 
 namespace Log {
 
-class BaseLogger {
+class BaseLogger : public ThreadSafety {
     public:
-
         BaseLogger();
         ~BaseLogger();
         
@@ -21,10 +21,7 @@ class BaseLogger {
         void set_level(Level lvl);
         Level level() const;
 
-
-
         virtual void flush();
-
 
     private:
         virtual void log(const std::string& msg, Level lvl);
