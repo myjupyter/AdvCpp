@@ -12,7 +12,7 @@ class LogColorFormatter : public LogFormatter {
         
         explicit LogColorFormatter(const std::string& msg, Level lvl);
         
-        virtual std::string getLevel() const;
+        std::string getLevel() const override;
 };
 
 } // namespace Log
