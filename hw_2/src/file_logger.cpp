@@ -1,27 +1,21 @@
-#include "file_logger.h"
+#include <file_logger.h>
 
-#include <iostream>
-
-#include "log_formatter.h"
+#include <log_formatter.h>
 
 namespace Log {
 
 FileLogger::FileLogger() 
-    : file_(std::string(DEFAULT_NAME) + POSTFIX) {
+    : file_("LOG.log") {
     if (!file_) {
         throw std::runtime_error("File creating error");
     }
 }
 
 FileLogger::FileLogger(const std::string& filename) 
-    : file_(filename + POSTFIX) {
+    : file_(filename + ".log") {
     if (!file_) {
         throw std::runtime_error("File creating error");
     }
-}
-
-FileLogger::~FileLogger() {
-    file_.close();
 }
 
 void FileLogger::flush() {

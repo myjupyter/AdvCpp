@@ -1,19 +1,19 @@
 #ifndef STDERR_LOGGER_H_
 #define STDERR_LOGGER_H_
 
-#include "base_logger.h"
+#include <base_logger.h>
 
 namespace Log {
 
 class StderrLogger : public BaseLogger {
     public:
-        StderrLogger();
-        ~StderrLogger();
+        StderrLogger() = default;
+        ~StderrLogger() = default;
 
-        virtual void flush();
+        void flush() override;
 
     private:
-        virtual void log(const std::string& msg, Level level);
+        void log(const std::string& msg, Level level) override;
 };
 
 } // namespace Log

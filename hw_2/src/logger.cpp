@@ -12,9 +12,8 @@ GlobalLogger& Logger::getGlobalLogger() {
 }
 
 void Logger::setGlobalLogger(GlobalLogger&& logger) {
-    lockMut();
+    const std::lock_guard<std::mutex> lock(mutex_);
     global_logger_ = std::move(logger);
-    unlockMut();
 }
 
 Logger::Logger()

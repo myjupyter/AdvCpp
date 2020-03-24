@@ -6,10 +6,6 @@
 
 namespace Log {
 
-StderrLogger::StderrLogger() {}
-
-StderrLogger::~StderrLogger() {}
-
 void StderrLogger::flush() {
     std::cerr.flush();
 }

@@ -1,12 +1,9 @@
 #ifndef FILE_LOGGER_H_
 #define FILE_LOGGER_H_
 
-#include "base_logger.h"
+#include <base_logger.h>
 
 #include <fstream>
-
-#define DEFAULT_NAME "LOG"
-#define POSTFIX ".log"
 
 namespace Log {
 
@@ -14,12 +11,12 @@ class FileLogger : public BaseLogger {
     public:
         FileLogger();
         explicit FileLogger(const std::string& path);
-        ~FileLogger();
+        ~FileLogger() = default;
 
-        virtual void flush();
+        void flush() override;
 
     private:
-        virtual void log(const std::string& msg, Level level);
+        void log(const std::string& msg, Level level) override;
         
         std::ofstream file_;
 };

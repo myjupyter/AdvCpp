@@ -1,8 +1,7 @@
-#include "log_formatter.h"
+#include <log_formatter.h>
 
 #include <iomanip>
 #include <ctime>
-#include <map>
 
 #define TIME_FORMAT "%c"
 
@@ -17,7 +16,7 @@ std::ostream& operator<<(std::ostream& os, const LogFormatter& formatter) {
     std::time_t t = std::time(nullptr);
     std::tm tm = *std::localtime(&t);
 
-    os << "[" << formatter.getLevel() << " " << std::put_time(&tm, TIME_FORMAT) << "]: "<< formatter.getMessage();
+    os << formatter.getLevel() << ":[" << std::put_time(&tm, TIME_FORMAT) << "]: "<< formatter.getMessage();
     return os;
 }
 

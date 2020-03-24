@@ -4,18 +4,18 @@
 #include <common.h>
 
 #include <ostream>
-#include <map>
+#include <unordered_map>
 
-#define DEBUG_STR "DEBUG"
-#define ERROR_STR "ERROR"
+#define DEBUG_STR   "  DEBUG"
+#define INFO_STR    "   INFO"
 #define WARNING_STR "WARNING"
-#define INFO_STR "INFO"
+#define ERROR_STR   "  ERROR"
 
-static std::map<Log::Level, const std::string> LEVEL {
-    {Log::Level::DEBUG, std::string(DEBUG_STR)},
-    {Log::Level::INFO, std::string(INFO_STR)},
-    {Log::Level::WARNING, std::string(WARNING_STR)},
-    {Log::Level::ERROR, std::string(ERROR_STR)},
+static std::unordered_map<Log::Level, const std::string> LEVEL {
+    {Log::Level::DEBUG, DEBUG_STR},
+    {Log::Level::INFO, INFO_STR},
+    {Log::Level::WARNING, WARNING_STR},
+    {Log::Level::ERROR, ERROR_STR},
 };
 
 

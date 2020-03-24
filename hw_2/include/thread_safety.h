@@ -7,11 +7,11 @@ namespace Log {
 
 class ThreadSafety {
     public:
-        inline void lockMut() { 
+        void lockMut() { 
             access_.lock();
         }
         
-        inline void unlockMut() {
+        void unlockMut() {
             access_.unlock();
         };
 

@@ -9,7 +9,7 @@ namespace Log {
 
 using GlobalLogger = std::unique_ptr<BaseLogger>;
 
-class Logger : public ThreadSafety {
+class Logger {
     public:
         
         static Logger& getInstance();
@@ -25,6 +25,7 @@ class Logger : public ThreadSafety {
         Logger();
         
         GlobalLogger global_logger_;        
+        std::mutex mutex_;
 };
 
 } // namespace Log

@@ -15,30 +15,30 @@ LogPtr create_stderr_logger() {
 }
 
 void debug(const std::string& msg) {
-    Logger& logger = Logger::getInstance();
-    if(logger.getGlobalLogger()) {
-        logger.getGlobalLogger()->debug(msg);
+    auto& logger = Logger::getInstance().getGlobalLogger();
+    if(logger) {
+        logger->debug(msg);
     }
 }
 
 void info(const std::string& msg) {
-    Logger& logger = Logger::getInstance();
-    if (logger.getGlobalLogger()) {
-        logger.getGlobalLogger()->info(msg);
+    auto& logger = Logger::getInstance().getGlobalLogger();
+    if (logger) {
+        logger->info(msg);
     }
 }
 
 void warning(const std::string& msg) {
-    Logger& logger = Logger::getInstance();
-    if (logger.getGlobalLogger()) {
-        logger.getGlobalLogger()->warn(msg);
+    auto& logger = Logger::getInstance().getGlobalLogger();
+    if (logger) {
+        logger->warn(msg);
     }
 }
 
 void error(const std::string& msg) {
-    Logger& logger = Logger::getInstance();
-    if (logger.getGlobalLogger()) {
-        logger.getGlobalLogger()->error(msg);
+    auto& logger = Logger::getInstance().getGlobalLogger();
+    if (logger) {
+        logger->error(msg);
     }
 }
 

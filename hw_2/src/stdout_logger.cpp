@@ -6,10 +6,6 @@
 
 namespace Log {
 
-StdoutLogger::StdoutLogger() {}
-
-StdoutLogger::~StdoutLogger() {}
-
 void StdoutLogger::flush() {
     std::cout.flush();
 }
