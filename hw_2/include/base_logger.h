@@ -5,7 +5,6 @@
 #include <mutex>
 
 #include <common.h>
-//#include <thread_safety.h>
 
 namespace Log {
 
