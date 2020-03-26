@@ -18,18 +18,18 @@ int main(int argc, char *argv[]) {
 
         process::Process proc(argv[1], args);
 
-        std::string s("0xdeadbeef");
-        while (proc.isWorking() && !s.empty()) {
-            s.clear();
-            std::cin >> s;
+        std::string input("0xdeadbeef");
+        while (proc.isWorking() && !input.empty()) {
+            input.clear();
+            std::cin >> input;
             
-            std::vector<char> vec(s.size());
+            std::string result;
+            result.resize(input.size()); 
 
-            proc.writeExact(s.c_str(), s.size());
-            proc.readExact(vec.data(), vec.size());
+            proc.writeExact(input.data(), input.size());
+            proc.readExact(result.data(), result.size());
 
-            vec.push_back('\0');            
-            std::cout << vec.data() << std::endl;    
+            std::cout << result << std::endl;    
         }
     
     } catch (std::runtime_error& err) {

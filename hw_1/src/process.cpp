@@ -13,7 +13,7 @@
 namespace process {
  
 Process::Process(const std::string& path,
-                 const std::vector<std::string> args) {
+                 const std::vector<std::string>& args) {
 
     int pipe1[2];
     int pipe2[2];
@@ -46,10 +46,9 @@ Process::Process(const std::string& path,
         ::close(child_read);
         ::close(child_write);
 
-        std::vector<std::string> args_copy(args);
         std::vector<char*> argv;
         argv.push_back(const_cast<char*>(path.c_str()));
-        for (std::string& arg: args_copy) {
+        for (const std::string& arg: args) {
             argv.push_back(const_cast<char*>(arg.c_str()));
         }
         argv.push_back(nullptr);
