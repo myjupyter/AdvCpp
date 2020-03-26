@@ -1,5 +1,6 @@
 *.out
 *.so
+*.log
 
 CMakeCache.txt
 cmake_install.cmake 
