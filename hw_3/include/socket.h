@@ -18,11 +18,13 @@ class Socket : NonCopyable {
         explicit Socket(int socket);
         virtual ~Socket();
     
-        virtual std::size_t write(const void* data, std::size_t size) final;
-        virtual void writeExact(const void* data, std::size_t size) final;
+        std::size_t write(const void* data, std::size_t size);
+        void writeExact(const void* data, std::size_t size);
 
-        virtual std::size_t read(void* data, std::size_t size) final;
-        virtual void readExact(void* data, std::size_t size) final;
+        virtual std::size_t read(void* data, std::size_t size);
+        virtual void readExact(void* data, std::size_t size);
+
+        int getSocket() const;
 
         bool isOpened() const;
 

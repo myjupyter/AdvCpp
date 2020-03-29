@@ -1,5 +1,6 @@
 set(LIB_SRCS ${SRC_DIR}/ip_address.cpp
-             ${SRC_DIR}/socket.cpp)
+             ${SRC_DIR}/socket.cpp
+             ${SRC_DIR}/connection_tcp.cpp)
 
 add_library(${LIB_NAME} SHARED ${LIB_SRCS})
 

@@ -1,8 +1,6 @@
 #include <iostream>
 
-#include <ip_address.h>
-#include <socket.h>
-#include <socket_manager.h>
+#include <connection_tcp.h>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -10,10 +8,13 @@
 int main(int argc, char* argv[]) {
 
     try {
-    Network::Socket fd(open("example.txt", O_CREAT | O_RDWR));
-    
-    char buffer[100] = "asdffds";
-    fd.write(buffer, 100);
+        Network::ConnectionTcp con;
+        std::cout << con.connect(Network::IpAddress(8888)) << std::endl;
+
+        char buffer[100] = "asdfadsasdf";
+
+        con.write(buffer, 100);
+
     } catch (const std::runtime_error& err) {
         std::cerr << err.what() << std::endl;
     }

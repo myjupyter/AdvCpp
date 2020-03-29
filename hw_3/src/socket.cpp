@@ -60,6 +60,10 @@ void Socket::readExact(void* data, std::size_t size) {
     }
 }
 
+int Socket::getSocket() const {
+    return sock_;
+}
+
 bool Socket::isOpened() const {
     return state_;
 }

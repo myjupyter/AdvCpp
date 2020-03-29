@@ -19,11 +19,11 @@ class IpAddress {
 
         void setPort(uint16_t port);
     
-        struct sockaddr_in getSockAddr() const;
+        sockaddr_in getSockAddr() const; 
     private:
         bool isValidAddr(const std::string& address) const;
         
-        struct sockaddr_in addr;
+        sockaddr_in addr;
 };
 
 }
