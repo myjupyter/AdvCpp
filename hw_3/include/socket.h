@@ -12,7 +12,13 @@
 namespace Network {
 
 class Socket : NonCopyable {    
-    public:
+    public:        
+        enum SockStatus{
+            OK,
+            ERROR,
+            DISCONNECT,
+        };
+
         Socket();
         
         explicit Socket(int socket);
@@ -26,11 +32,15 @@ class Socket : NonCopyable {
 
         int getSocket() const;
 
+        bool isBlocking() const;
+        void setBlocking(bool to_block);
+
         bool isOpened() const;
 
     private:
         int sock_;
         bool state_; 
+        bool is_blocking_;
 };
 
 }  // namespace Network
