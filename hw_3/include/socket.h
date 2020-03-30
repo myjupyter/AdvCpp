@@ -20,17 +20,21 @@ class Socket : NonCopyable {
         };
 
         Socket();
-        
         explicit Socket(int socket);
-        virtual ~Socket();
-    
+        
+        Socket(Socket&& socket);
+        Socket& operator=(Socket&& socket);
+        
+        virtual ~Socket() = default;
+        
         std::size_t write(const void* data, std::size_t size);
         void writeExact(const void* data, std::size_t size);
-
         virtual std::size_t read(void* data, std::size_t size);
         virtual void readExact(void* data, std::size_t size);
 
         int getSocket() const;
+
+        void close();
 
         bool isBlocking() const;
         void setBlocking(bool to_block);

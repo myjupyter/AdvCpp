@@ -25,18 +25,33 @@ class SocketManager {
             return sock;
         }
 
-        static int makeSocket(int type, const IpAddress& addr) {
-            int sock = socket(AF_INET, type, 0);
-            if (sock < 0) {
-                throw std::runtime_error(std::strerror(errno));
-            }
-            
-            sockaddr_in addr_in = addr.getSockAddr();            
-            if (bind(sock, reinterpret_cast<sockaddr*>(&addr_in), sizeof(addr_in)) < 0) {
+        static int bindSocket(int socket, IpAddress& addr) { 
+            if (bind(socket, reinterpret_cast<sockaddr*>(&addr.getSockAddr()),
+                     sizeof(addr.getSockAddr())) < 0) {
                 throw std::runtime_error(std::strerror(errno));
             }
 
-            return sock;
+            return socket;
+        }
+
+        static int listenSocket(int socket, int count) {
+            if (listen(socket, count)) {
+                if (errno == EINVAL) return 0;
+
+                throw std::runtime_error(std::strerror(errno));
+            }
+            return 0;
+        }
+    
+        static int accept(int socket, IpAddress& addr) {
+            socklen_t length = static_cast<socklen_t>(sizeof(addr.getSockAddr()));
+            int client_socket = ::accept(socket,
+                    reinterpret_cast<sockaddr*>(&addr.getSockAddr()),
+                    &length);
+            if (client_socket == -1) {
+                throw std::runtime_error(std::strerror(errno));
+            }
+            return client_socket;
         }
 
         static int setTimeout(int socket, int option, std::chrono::seconds time) {

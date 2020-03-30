@@ -14,11 +14,24 @@ Socket::Socket(int socket)
     , state_(true)
     , is_blocking_(false) {}
 
-Socket::~Socket() {
-    if(sock_ < 0) {
-        return;
+Socket::Socket(Socket&& socket)
+    : sock_(socket.sock_)
+    , state_(socket.state_)
+    , is_blocking_(socket.is_blocking_) {
+    socket.sock_ = -1;    
+}
+
+Socket& Socket::operator=(Socket&& socket) {
+    if (this == &socket) {
+        return *this;
     }
-    ::close(sock_);
+    sock_ = socket.sock_;
+    state_ = socket.state_;
+    is_blocking_ = socket.is_blocking_;
+
+    socket.sock_ = -1;
+
+    return *this;
 }
 
 std::size_t Socket::write(const void* data, std::size_t size) {
@@ -66,6 +79,16 @@ void Socket::readExact(void* data, std::size_t size) {
     }
 }
 
+int Socket::getSocket() const {
+    return sock_;
+}
+
+void Socket::close() {
+    ::close(sock_);
+
+    state_ = false;
+}
+
 void Socket::setBlocking(bool to_block) {
     if (is_blocking_ ^ to_block) {
         SocketManager::setBlocking(sock_); 
@@ -76,9 +99,6 @@ bool Socket::isBlocking() const {
     return is_blocking_;
 }
 
-int Socket::getSocket() const {
-    return sock_;
-}
 
 bool Socket::isOpened() const {
     return state_;

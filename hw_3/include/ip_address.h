@@ -13,13 +13,19 @@ class IpAddress {
         IpAddress();
         ~IpAddress() = default;
 
-        explicit IpAddress(uint16_t port);
-        explicit IpAddress(const std::string& address, uint16_t port); 
-        explicit IpAddress(uint32_t address, uint16_t port);
+        IpAddress(uint16_t port);
+        IpAddress(const std::string& address, uint16_t port); 
+        IpAddress(uint32_t address, uint16_t port);
+
+        IpAddress(const IpAddress& address) = default;
+        IpAddress& operator=(const IpAddress& address) = default;
+
+        IpAddress(IpAddress&& address) = default;
+        IpAddress& operator=(IpAddress&& address) = default;
 
         void setPort(uint16_t port);
     
-        sockaddr_in getSockAddr() const; 
+        sockaddr_in& getSockAddr(); 
     private:
         bool isValidAddr(const std::string& address) const;
         

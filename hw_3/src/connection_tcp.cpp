@@ -3,34 +3,46 @@
 namespace Network {
 
 ConnectionTcp::ConnectionTcp()
-    : Socket(SocketManager::makeSocket(SOCK_STREAM)) {
+    : Socket(SocketManager::makeSocket(SOCK_STREAM))
+    , dest_addr_(IpAddress()) {
     SocketManager::setOption(getSocket(), SO_REUSEADDR);    
 }
 
-Socket::SockStatus ConnectionTcp::connect(uint32_t address, uint16_t port) {
-    auto addr = IpAddress(address, port);
-    sockaddr_in addr_in = addr.getSockAddr();
-    return ::connect(getSocket(), reinterpret_cast<sockaddr*>(&addr_in), sizeof(addr_in)) == -1 ? Socket::ERROR : Socket::OK;
+ConnectionTcp::ConnectionTcp(const IpAddress& addr)
+    : Socket(SocketManager::makeSocket(SOCK_STREAM))
+    , dest_addr_(addr) {
+    SocketManager::setOption(getSocket(), SO_REUSEADDR);
 }
 
-Socket::SockStatus ConnectionTcp::connect(const std::string& address, uint16_t port) {
-    auto addr = IpAddress(address, port);
-    sockaddr_in addr_in = addr.getSockAddr();
-    return ::connect(getSocket(), reinterpret_cast<sockaddr*>(&addr_in), sizeof(addr_in)) == -1 ? Socket::ERROR : Socket::OK;
+ConnectionTcp::ConnectionTcp(int socket, const IpAddress& addr) 
+    : Socket(socket)
+    , dest_addr_(addr) {}
+
+ConnectionTcp::~ConnectionTcp() {
+    Socket::close();
 }
 
-Socket::SockStatus ConnectionTcp::connect(const IpAddress& address) {
-    sockaddr_in addr_in = address.getSockAddr();
-    return ::connect(getSocket(), reinterpret_cast<sockaddr*>(&addr_in), sizeof(addr_in)) == -1 ? Socket::ERROR : Socket::OK;
+Socket::SockStatus ConnectionTcp::connect() {
+    return ::connect(getSocket(), reinterpret_cast<sockaddr*>(&dest_addr_.getSockAddr()),
+                     sizeof(dest_addr_.getSockAddr())) == -1 ? Socket::ERROR : Socket::OK;
 }
 
-int ConnectionTcp::setReadTimeout(std::chrono::seconds time) {
-    return SocketManager::setTimeout(getSocket(), SO_RCVTIMEO, time);
-}
-int ConnectionTcp::setWriteTimeout(std::chrono::seconds time) {
-    return SocketManager::setTimeout(getSocket(), SO_SNDTIMEO, time);
+Socket::SockStatus ConnectionTcp::connect(const IpAddress& addr) {
+    dest_addr_ = addr;
+    return ::connect(getSocket(), reinterpret_cast<sockaddr*>(&dest_addr_.getSockAddr()),
+                     sizeof(dest_addr_.getSockAddr())) == -1 ? Socket::ERROR : Socket::OK;
 }
 
+int ConnectionTcp::setTimeout(std::chrono::seconds time, Timeout type) {
+    switch(type) {
+        case Timeout::READ:
+            return SocketManager::setTimeout(getSocket(), SO_RCVTIMEO, time);
+        case Timeout::WRITE:
+            return SocketManager::setTimeout(getSocket(), SO_SNDTIMEO, time);
+        default:
+            return 0;
+    }
+}
 
 }  // namespace Network
 

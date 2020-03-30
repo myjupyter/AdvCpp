@@ -12,14 +12,29 @@ namespace Network {
 class ConnectionTcp : public Socket {    
     public:
         ConnectionTcp();
-        ~ConnectionTcp() = default;
-        
-        Socket::SockStatus connect(const IpAddress& address);
-        Socket::SockStatus connect(const std::string& address, uint16_t port);
-        Socket::SockStatus connect(uint32_t address, uint16_t port);        
+        explicit ConnectionTcp(const IpAddress& addr);
+        ~ConnectionTcp();
 
-        int setWriteTimeout(std::chrono::seconds time);
-        int setReadTimeout(std::chrono::seconds time);
+        ConnectionTcp(ConnectionTcp&& connection) = default;
+        ConnectionTcp& operator=(ConnectionTcp&& connection) = default;
+
+        Socket::SockStatus connect();
+        Socket::SockStatus connect(const IpAddress& addr);
+
+        enum Timeout {
+            READ,
+            WRITE,
+            CONNECT,
+        };
+
+        int setTimeout(std::chrono::seconds time, Timeout type);
+    
+
+    private:
+        ConnectionTcp(int socket, const IpAddress& addr);
+        IpAddress dest_addr_;
+
+        friend class ServerTcp; 
 };
 
 }  // namespace Network

@@ -11,18 +11,25 @@ set(INC_DIR ${PRJ_DIR}/include)
 set(SRC_DIR ${PRJ_DIR}/src)
 set(LIB_DIR ${PRJ_DIR}/lib)
 
-set(LIB_NAME Tcp)
-set(TARGET_NAME prog.out)
+set(LIB_NAME   Tcp)
+set(CLIENT_OUT client.out)
+set(SERVER_OUT server.out)
 
 add_subdirectory(${LIB_DIR})
 
-set(SRCS ${SRC_DIR}/main.cpp)
-
-add_executable(${TARGET_NAME} ${SRCS})
+set(CLIENT_SRCS ${SRC_DIR}/client.cpp)
+set(SERVER_SRCS ${SRC_DIR}/server.cpp)
 
 #set(THREADS_PREFER_PTHREAD_FLAG ON)
 #find_package(Threads REQUIRED)
+#  Threads::Threads)
 
-target_link_libraries(${TARGET_NAME} LINK_PUBLIC ${LIB_NAME})
-    #  Threads::Threads)
-target_include_directories(${TARGET_NAME} PUBLIC ${LIB_DIR})
+# =============== Client example executable =============== #
+add_executable(${CLIENT_OUT} ${CLIENT_SRCS})
+target_link_libraries(${CLIENT_OUT} PUBLIC ${LIB_NAME})
+target_include_directories(${CLIENT_OUT} PUBLIC ${LIB_DIR})
+
+# =============== Server example executable =============== #
+add_executable(${SERVER_OUT} ${SERVER_SRCS})
+target_link_libraries(${SERVER_OUT} PUBLIC ${LIB_NAME})
+target_include_directories(${SERVER_OUT} PUBLIC ${LIB_DIR})

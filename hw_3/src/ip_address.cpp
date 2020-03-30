@@ -36,7 +36,7 @@ void IpAddress::setPort(uint16_t port) {
     addr.sin_port = htons(port);
 }
 
-sockaddr_in IpAddress::getSockAddr() const {
+sockaddr_in& IpAddress::getSockAddr() {
     return addr;
 }
 
