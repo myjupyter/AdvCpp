@@ -11,14 +11,20 @@ ConnectionTcp::ConnectionTcp()
 ConnectionTcp::ConnectionTcp(const IpAddress& addr)
     : Socket(SocketManager::makeSocket(SOCK_STREAM))
     , dest_addr_(addr) {
-    SocketManager::setOption(getSocket(), SO_REUSEADDR);
+    SocketManager::setOption(getSocket(), SO_REUSEADDR);    
 }
 
 ConnectionTcp::ConnectionTcp(int socket, const IpAddress& addr) 
     : Socket(socket)
-    , dest_addr_(addr) {}
+    , dest_addr_(addr) {
+    SocketManager::setOption(getSocket(), SO_REUSEADDR);
+}
 
 ConnectionTcp::~ConnectionTcp() {
+    Socket::close();
+}
+
+void ConnectionTcp::close() {
     Socket::close();
 }
 

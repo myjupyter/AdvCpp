@@ -34,13 +34,10 @@ class SocketManager {
             return socket;
         }
 
-        static int listenSocket(int socket, int count) {
-            if (listen(socket, count)) {
-                if (errno == EINVAL) return 0;
-
+        static void listenSocket(int socket, int count) {
+            if (listen(socket, count) < -1) {
                 throw std::runtime_error(std::strerror(errno));
             }
-            return 0;
         }
     
         static int accept(int socket, IpAddress& addr) {

@@ -21,10 +21,11 @@ class ConnectionTcp : public Socket {
         Socket::SockStatus connect();
         Socket::SockStatus connect(const IpAddress& addr);
 
+        void close();
+
         enum Timeout {
             READ,
             WRITE,
-            CONNECT,
         };
 
         int setTimeout(std::chrono::seconds time, Timeout type);

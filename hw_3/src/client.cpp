@@ -7,10 +7,16 @@
 
 int main(int argc, char* argv[]) {
     try {
-        Network::ConnectionTcp con({"127.0.0.1", 8888});
+        if (argc < 3) {
+            throw std::runtime_error(std::string("Should be: ") + \
+                    argv[0] + std::string(" ip address + port"));
+        }
+
+        Network::ConnectionTcp con({argv[1], 
+                static_cast<uint16_t>(std::stoi(argv[2]))});
         if (con.connect() == Network::Socket::OK) {
             
-            con.setTimeout(std::chrono::seconds(5), Network::ConnectionTcp::READ);
+            con.setBlocking(false);
             
             std::string s("0xdeadbeef");
             

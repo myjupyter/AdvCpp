@@ -43,7 +43,7 @@ class Socket : NonCopyable {
 
     private:
         int sock_;
-        bool state_; 
+        SockStatus state_; 
         bool is_blocking_;
 };
 

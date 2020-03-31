@@ -12,16 +12,16 @@ int main() {
         if (Network::Socket::OK == server.listen()) {
 
             Network::ConnectionTcp client;
-            if (Network::Socket::OK == server.accept(client)) {
-                std::cout << "Connection has been established" << std::endl;
-            }  
 
-            while (true) {
-                std::string s;
-                s.resize(BUFFER_SIZE);
-            
-                client.read(s.data(), s.size());
-                client.write(s.data(), s.size());
+            while (Network::Socket::OK == server.accept(client)) {
+                std::cout << "Connection has been established" << std::endl;
+                while (client.isOpened()) {
+                    std::string s;
+                    s.resize(BUFFER_SIZE);
+
+                    std::size_t len = client.read(s.data(), s.size());
+                    client.write(s.data(), len);
+                }
             }
         }
     } catch (std::runtime_error& err) {
