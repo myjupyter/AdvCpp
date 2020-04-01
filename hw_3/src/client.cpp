@@ -15,9 +15,7 @@ int main(int argc, char* argv[]) {
         Network::ConnectionTcp con({argv[1], 
                 static_cast<uint16_t>(std::stoi(argv[2]))});
         if (con.connect() == Network::Socket::OK) {
-            
-            con.setBlocking(false);
-            
+             
             std::string s("0xdeadbeef");
             
             while(!s.empty()) {

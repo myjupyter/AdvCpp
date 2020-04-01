@@ -28,7 +28,7 @@ class ConnectionTcp : public Socket {
             WRITE,
         };
 
-        int setTimeout(std::chrono::seconds time, Timeout type);
+        void setTimeout(std::chrono::seconds time, Timeout type);
     
 
     private:

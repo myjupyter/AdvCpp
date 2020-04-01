@@ -12,12 +12,20 @@ class ServerTcp : public Socket {
     public:
         ServerTcp();
         explicit ServerTcp(const IpAddress& address);
+        ServerTcp(ServerTcp&& server) = default;
+        ServerTcp& operator=(ServerTcp&& server) = default;
         ~ServerTcp() = default;
        
         Socket::SockStatus listen(); 
         Socket::SockStatus accept(ConnectionTcp& connection);
+    
+        Socket::SockStatus restart();
+        Socket::SockStatus restart(const IpAddress& address);
 
-        int setTimeout(std::chrono::seconds time);
+        std::size_t write(const void* data, std::size_t size) = delete;
+        void writeExact(const void* data, std::size_t size) = delete;
+        std::size_t read(void* data, std::size_t size) = delete;
+        void readExact(void* data, std::size_t size) = delete;
 
         void setMaxConnections(uint16_t count);
 

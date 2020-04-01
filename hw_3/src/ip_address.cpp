@@ -25,7 +25,6 @@ IpAddress::IpAddress(const std::string& address, uint16_t port) {
     addr.sin_addr.s_addr = inet_addr(address.c_str());
 }
 
-// only for ipv4
 IpAddress::IpAddress(uint32_t address, uint16_t port) {
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons(port);

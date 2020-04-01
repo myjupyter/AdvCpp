@@ -12,6 +12,7 @@ ServerTcp::ServerTcp()
     , max_connections_(MAX_CONNECTIONS) {
     SocketManager::setOption(getSocket(), SO_REUSEADDR);
     SocketManager::bindSocket(getSocket(), server_addr_);        
+    setSocketStatus(Socket::OK);
 }
 
 ServerTcp::ServerTcp(const IpAddress& address) 
@@ -20,6 +21,7 @@ ServerTcp::ServerTcp(const IpAddress& address)
     , max_connections_(MAX_CONNECTIONS) {
     SocketManager::setOption(getSocket(), SO_REUSEADDR);
     SocketManager::bindSocket(getSocket(), server_addr_);    
+    setSocketStatus(Socket::OK);
 }
 
 Socket::SockStatus ServerTcp::listen() {
@@ -44,8 +46,27 @@ Socket::SockStatus ServerTcp::accept(ConnectionTcp& connection) {
     return Socket::OK;
 }
 
-int ServerTcp::setTimeout(std::chrono::seconds time) {
-    return 0;
+Socket::SockStatus ServerTcp::restart() {
+    close();
+
+    ServerTcp new_server(server_addr_);
+    new_server.setMaxConnections(max_connections_);
+    if (Socket::OK == new_server.listen()) {
+        *this = std::move(new_server);
+        return Socket::RECONNECT;
+    }
+    return Socket::ERROR;
+}
+
+Socket::SockStatus ServerTcp::restart(const IpAddress& address) {
+    close();
+    
+    ServerTcp new_server(address);
+    if (Socket::OK == new_server.listen()) {
+        *this = std::move(new_server);
+        return Socket::RECONNECT;
+    }
+    return Socket::ERROR;
 }
 
 void ServerTcp::setMaxConnections(uint16_t count) {

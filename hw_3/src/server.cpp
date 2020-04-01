@@ -9,6 +9,8 @@ int main() {
 
     try {    
         Network::ServerTcp server({"127.0.0.1", 8888});
+
+        server.restart({"127.0.0.1", 8889});
         if (Network::Socket::OK == server.listen()) {
 
             Network::ConnectionTcp client;

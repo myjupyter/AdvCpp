@@ -19,7 +19,7 @@ Socket::Socket()
 
 Socket::Socket(int socket)
     : sock_(socket)
-    , state_(Socket::OK)
+    , state_(Socket::DISCONNECT)
     , is_blocking_(true) {}
 
 Socket::Socket(Socket&& socket)
@@ -94,7 +94,7 @@ void Socket::readExact(void* data, std::size_t size) {
         old_rest = rest;
         rest += read(static_cast<char*>(data) + rest, size - rest);
         if ((rest - old_rest) == 0) {
-            throw std::runtime_error("");
+            throw std::runtime_error("readExact");
         }
     }
 }
@@ -123,6 +123,14 @@ bool Socket::isBlocking() const {
 
 bool Socket::isOpened() const {
     return state_ == Socket::OK;
+}
+
+Socket::SockStatus Socket::getSocketStatus() const {
+    return state_;
+}
+
+void Socket::setSocketStatus(Socket::SockStatus status) {
+    state_ = status;
 }
 
 }

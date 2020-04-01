@@ -42,6 +42,7 @@ class SocketManager {
     
         static int accept(int socket, IpAddress& addr) {
             socklen_t length = static_cast<socklen_t>(sizeof(addr.getSockAddr()));
+            
             int client_socket = ::accept(socket,
                     reinterpret_cast<sockaddr*>(&addr.getSockAddr()),
                     &length);

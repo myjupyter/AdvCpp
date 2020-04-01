@@ -17,6 +17,7 @@ class Socket : NonCopyable {
             OK,
             ERROR,
             DISCONNECT,
+            RECONNECT,
         };
 
         Socket();
@@ -29,8 +30,8 @@ class Socket : NonCopyable {
         
         std::size_t write(const void* data, std::size_t size);
         void writeExact(const void* data, std::size_t size);
-        virtual std::size_t read(void* data, std::size_t size);
-        virtual void readExact(void* data, std::size_t size);
+        std::size_t read(void* data, std::size_t size);
+        void readExact(void* data, std::size_t size);
 
         int getSocket() const;
 
@@ -41,7 +42,12 @@ class Socket : NonCopyable {
 
         bool isOpened() const;
 
+        SockStatus getSocketStatus() const;
+    protected:
+        void setSocketStatus(Socket::SockStatus);
+    
     private:
+
         int sock_;
         SockStatus state_; 
         bool is_blocking_;
