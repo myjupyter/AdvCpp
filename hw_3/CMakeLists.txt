@@ -10,6 +10,7 @@ set(PRJ_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(INC_DIR ${PRJ_DIR}/include)
 set(SRC_DIR ${PRJ_DIR}/src)
 set(LIB_DIR ${PRJ_DIR}/lib)
+set(EXM_DIR ${PRJ_DIR}/example)
 
 set(LIB_NAME   Tcp)
 set(CLIENT_OUT client.out)
@@ -17,12 +18,8 @@ set(SERVER_OUT server.out)
 
 add_subdirectory(${LIB_DIR})
 
-set(CLIENT_SRCS ${SRC_DIR}/client.cpp)
-set(SERVER_SRCS ${SRC_DIR}/server.cpp)
-
-#set(THREADS_PREFER_PTHREAD_FLAG ON)
-#find_package(Threads REQUIRED)
-#  Threads::Threads)
+set(CLIENT_SRCS ${EXM_DIR}/client.cpp)
+set(SERVER_SRCS ${EXM_DIR}/server.cpp)
 
 # =============== Client example executable =============== #
 add_executable(${CLIENT_OUT} ${CLIENT_SRCS})

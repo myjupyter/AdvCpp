@@ -2,12 +2,12 @@
 
 #include <iostream>
 
-const uint16_t MAX_CONNECTIONS = 0xffff;
+static const uint16_t MAX_CONNECTIONS = 0xffff;
 
 namespace Network {
 
 ServerTcp::ServerTcp()
-    : Socket(SocketManager::makeSocket(SOCK_STREAM))
+    : Socket(SockType::TCP)
     , server_addr_(IpAddress())
     , max_connections_(MAX_CONNECTIONS) {
     SocketManager::setOption(getSocket(), SO_REUSEADDR);
@@ -16,7 +16,7 @@ ServerTcp::ServerTcp()
 }
 
 ServerTcp::ServerTcp(const IpAddress& address) 
-    : Socket(SocketManager::makeSocket(SOCK_STREAM))
+    : Socket(SockType::TCP)
     , server_addr_(address)
     , max_connections_(MAX_CONNECTIONS) {
     SocketManager::setOption(getSocket(), SO_REUSEADDR);
@@ -24,49 +24,45 @@ ServerTcp::ServerTcp(const IpAddress& address)
     setSocketStatus(Socket::OK);
 }
 
-Socket::SockStatus ServerTcp::listen() {
+void ServerTcp::listen() {
     try {
         SocketManager::listenSocket(getSocket(), max_connections_); 
     } catch (std::runtime_error& err) {
-        std::cerr << err.what() << std::endl;
-        return Socket::ERROR;
+        throw std::runtime_error(std::string("listen: ") + std::string(err.what()));
     }
-    return Socket::OK;
 }
 
-Socket::SockStatus ServerTcp::accept(ConnectionTcp& connection) {
+void ServerTcp::accept(ConnectionTcp& connection) {
+    IpAddress client_address;
     try {
-        IpAddress client_address;
         int socket = SocketManager::accept(getSocket(), client_address);
-        connection = std::move(ConnectionTcp(socket, client_address)); 
+        ConnectionTcp new_connection(socket, client_address);
+        connection = std::move(new_connection); 
     } catch (std::runtime_error& err) {
-        std::cerr << err.what() << std::endl;
-        return Socket::ERROR;
+        throw std::runtime_error("accept: " + std::string(err.what()));
     }
-    return Socket::OK;
 }
 
-Socket::SockStatus ServerTcp::restart() {
-    close();
-
-    ServerTcp new_server(server_addr_);
-    new_server.setMaxConnections(max_connections_);
-    if (Socket::OK == new_server.listen()) {
+void ServerTcp::restart() {
+    try {
+        ServerTcp new_server(server_addr_);
+        new_server.setMaxConnections(max_connections_);
+        new_server.listen();
         *this = std::move(new_server);
-        return Socket::RECONNECT;
+    } catch (std::runtime_error& err) {
+        throw std::runtime_error("restart: " + std::string(err.what()));
     }
-    return Socket::ERROR;
 }
 
-Socket::SockStatus ServerTcp::restart(const IpAddress& address) {
-    close();
-    
-    ServerTcp new_server(address);
-    if (Socket::OK == new_server.listen()) {
+void ServerTcp::restart(const IpAddress& address) {
+    try {    
+        ServerTcp new_server(address);    
+        new_server.setMaxConnections(max_connections_);
+        new_server.listen();
         *this = std::move(new_server);
-        return Socket::RECONNECT;
-    }
-    return Socket::ERROR;
+    } catch (std::runtime_error& err) {
+        throw std::runtime_error("restart: " + std::string(err.what()));
+    }    
 }
 
 void ServerTcp::setMaxConnections(uint16_t count) {

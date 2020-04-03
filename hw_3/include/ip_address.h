@@ -2,7 +2,6 @@
 #define IP_ADDRESS_H_
 
 #include <string>
-#include <stdexcept>
 
 #include <netinet/in.h>
 
@@ -26,10 +25,9 @@ class IpAddress {
         void setPort(uint16_t port);
     
         sockaddr_in& getSockAddr(); 
-    private:
-        bool isValidAddr(const std::string& address) const;
-        
-        sockaddr_in addr;
+    
+    private: 
+        sockaddr_in addr_;
 };
 
 }

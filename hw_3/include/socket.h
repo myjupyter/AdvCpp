@@ -7,47 +7,44 @@
 #include <cstring>
 #include <stdexcept>
 
-#include <non_copyable.h>
+#include "non_copyable.h"
+#include "socket_manager.h"
 
 namespace Network {
 
 class Socket : NonCopyable {    
-    public:        
-        enum SockStatus{
-            OK,
-            ERROR,
-            DISCONNECT,
-            RECONNECT,
+    public:         
+        enum SockType {
+            TCP,
+            UDP
         };
-
-        Socket();
-        explicit Socket(int socket);
         
+        Socket();
+        explicit Socket(SockType socket_type); 
         Socket(Socket&& socket);
         Socket& operator=(Socket&& socket);
+        virtual ~Socket();
         
-        virtual ~Socket() = default;
-        
-        std::size_t write(const void* data, std::size_t size);
-        void writeExact(const void* data, std::size_t size);
-        std::size_t read(void* data, std::size_t size);
-        void readExact(void* data, std::size_t size);
-
         int getSocket() const;
-
         void close();
 
         bool isBlocking() const;
         void setBlocking(bool to_block);
 
         bool isOpened() const;
+       
+        enum SockStatus{
+            OK,
+            DISCONNECT,
+        };
 
         SockStatus getSocketStatus() const;
+    
     protected:
+        explicit Socket(int socket);
         void setSocketStatus(Socket::SockStatus);
     
     private:
-
         int sock_;
         SockStatus state_; 
         bool is_blocking_;

@@ -10,70 +10,26 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <chrono>
+#include <stdexcept>
 
-#include <ip_address.h>
+#include "ip_address.h"
 
 namespace Network {
 
-class SocketManager {
-    public:   
-        static int makeSocket(int type = SOCK_STREAM) {
-            int sock = socket(AF_INET, type, 0);
-            if (sock < 0) {
-                throw std::runtime_error(std::strerror(errno));
-            }
-            return sock;
-        }
-
-        static int bindSocket(int socket, IpAddress& addr) { 
-            if (bind(socket, reinterpret_cast<sockaddr*>(&addr.getSockAddr()),
-                     sizeof(addr.getSockAddr())) < 0) {
-                throw std::runtime_error(std::strerror(errno));
-            }
-
-            return socket;
-        }
-
-        static void listenSocket(int socket, int count) {
-            if (listen(socket, count) < -1) {
-                throw std::runtime_error(std::strerror(errno));
-            }
-        }
-    
-        static int accept(int socket, IpAddress& addr) {
-            socklen_t length = static_cast<socklen_t>(sizeof(addr.getSockAddr()));
-            
-            int client_socket = ::accept(socket,
-                    reinterpret_cast<sockaddr*>(&addr.getSockAddr()),
-                    &length);
-            if (client_socket == -1) {
-                throw std::runtime_error(std::strerror(errno));
-            }
-            return client_socket;
-        }
-
-        static int setTimeout(int socket, int option, std::chrono::seconds time) {
-            timeval timeout{.tv_sec=time.count(), .tv_usec=0};
-            return setsockopt(socket, SOL_SOCKET, option, &timeout, sizeof(timeout));
-        }
-    
-        static int setOption(int socket, int option) {
-            int opt = 1;
-            return setsockopt(socket, SOL_SOCKET, option, &opt, sizeof(opt)); 
-        }
+namespace  SocketManager {
         
-        static int setBlocking(int socket) {
-            int flags;
-            if ((flags = fcntl(socket, F_GETFL, 0)) == -1)
-                flags = 0;
-            return fcntl(socket, F_SETFL, flags ^ O_NONBLOCK);
-        }
+int makeSocket(int type = SOCK_STREAM);
+int bindSocket(int socket, IpAddress& addr);
+void listenSocket(int socket, int count);
+int accept(int socket, IpAddress& addr);
 
-        static int getOption(int socket) {
-            return fcntl(socket, F_GETFL, 0);
-        } 
-};
+int setBlocking(int socket);
+int setTimeout(int socket, int option, std::chrono::seconds time);
+int setOption(int socket, int option);
+int getOption(int socket);
 
-}
+}   // SocketManager
+
+}   // Network
 
 #endif  // SOCKET_MANAGER_H_

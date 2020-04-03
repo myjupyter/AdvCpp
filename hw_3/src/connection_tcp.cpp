@@ -3,19 +3,19 @@
 namespace Network {
 
 ConnectionTcp::ConnectionTcp()
-    : Socket(SocketManager::makeSocket(SOCK_STREAM))
+    : RWSocket(Socket::SockType::TCP)
     , dest_addr_(IpAddress()) {
     SocketManager::setOption(getSocket(), SO_REUSEADDR);    
 }
 
 ConnectionTcp::ConnectionTcp(const IpAddress& addr)
-    : Socket(SocketManager::makeSocket(SOCK_STREAM))
+    : RWSocket(Socket::SockType::TCP)
     , dest_addr_(addr) {
     SocketManager::setOption(getSocket(), SO_REUSEADDR);    
 }
 
 ConnectionTcp::ConnectionTcp(int socket, const IpAddress& addr) 
-    : Socket(socket)
+    : RWSocket(socket)
     , dest_addr_(addr) {
     SocketManager::setOption(getSocket(), SO_REUSEADDR);
     setSocketStatus(Socket::OK);
@@ -29,33 +29,31 @@ void ConnectionTcp::close() {
     Socket::close();
 }
 
-Socket::SockStatus ConnectionTcp::connect() {
+void ConnectionTcp::connect() {
     if (isOpened()) {
-        return Socket::OK;
+        return;
     }
-    setSocketStatus(
-            ::connect(
-                getSocket(), 
-                reinterpret_cast<sockaddr*>(&dest_addr_.getSockAddr()),
-                sizeof(dest_addr_.getSockAddr())
-            ) == -1 ? Socket::ERROR : Socket::OK
-    );
-    return getSocketStatus();
+    int result = ::connect(getSocket(), reinterpret_cast<sockaddr*>(&dest_addr_.getSockAddr()),
+                           sizeof(dest_addr_.getSockAddr()));
+    if (result == -1) {
+        throw std::runtime_error(std::string("connect: ") + std::strerror(errno));
+    }
+    setSocketStatus(Socket::OK);
 }
 
-Socket::SockStatus ConnectionTcp::connect(const IpAddress& addr) {
+void ConnectionTcp::connect(const IpAddress& addr) {
     if (!isOpened()) {
         dest_addr_ = addr;
-        return connect();
+        connect();
     }
-    ConnectionTcp new_connection(addr);
-    if (Socket::OK == new_connection.connect()) {
+    try {
+        ConnectionTcp new_connection(addr);
+        new_connection.connect();
         *this = std::move(new_connection);
-        return Socket::RECONNECT;   
+    } catch (std::runtime_error& err) {
+        throw std::runtime_error("connect: " +  std::string(err.what()));
     }
-    return Socket::OK;
 }
-
 void ConnectionTcp::setTimeout(std::chrono::seconds time, Timeout type) {
     if (Timeout::READ == type) {
         SocketManager::setTimeout(getSocket(), SO_RCVTIMEO, time);
