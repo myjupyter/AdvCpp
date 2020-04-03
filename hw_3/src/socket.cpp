@@ -52,9 +52,11 @@ int Socket::getSocket() const {
 }
 
 void Socket::close() {
-    if (!isOpened() && sock_ != -1) {
+    if (isOpened() || sock_ != -1) {
         ::close(sock_);
+        
         state_ = Socket::DISCONNECT;
+        sock_  = -1; 
     }
 }
 
