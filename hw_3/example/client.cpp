@@ -1,9 +1,6 @@
 #include <iostream>
 
-#include <connection_tcp.h>
-
-#include <sys/stat.h>
-#include <fcntl.h>
+#include "connection_tcp.h"
 
 int main(int argc, char* argv[]) {
     try {
@@ -12,7 +9,6 @@ int main(int argc, char* argv[]) {
                     argv[0] + std::string(" ip address + port"));
         }
 
-        Network::IpAddress a(argv[1], static_cast<uint16_t>(std::stoi(argv[2])));
         Network::ConnectionTcp con({argv[1], static_cast<uint16_t>(std::stoi(argv[2]))});
         
         con.connect(); 

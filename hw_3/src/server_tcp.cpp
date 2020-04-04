@@ -1,6 +1,4 @@
-#include <server_tcp.h>
-
-#include <iostream>
+#include "server_tcp.h"
 
 static const uint16_t MAX_CONNECTIONS = 0xffff;
 
@@ -44,14 +42,7 @@ void ServerTcp::accept(ConnectionTcp& connection) {
 }
 
 void ServerTcp::restart() {
-    try {
-        ServerTcp new_server(server_addr_);
-        new_server.setMaxConnections(max_connections_);
-        new_server.listen();
-        *this = std::move(new_server);
-    } catch (std::runtime_error& err) {
-        throw std::runtime_error("restart: " + std::string(err.what()));
-    }
+    restart(server_addr_);
 }
 
 void ServerTcp::restart(const IpAddress& address) {
