@@ -57,7 +57,7 @@ std::size_t RWSocket::read(void* data, std::size_t size) {
     if (bytes == -1 && !IS_NONBLOCK_ERRNO() &&
         errno != ECONNRESET) {
         throw std::runtime_error(std::strerror(errno));
-    } else if ((bytes == 0 && isBlocking()) ||
+    } else if ((bytes == 0) ||
                 bytes == -1 && errno == ECONNRESET) {
         setSocketStatus(Socket::DISCONNECT);
         return 0;

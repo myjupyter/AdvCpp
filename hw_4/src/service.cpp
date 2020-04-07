@@ -1,4 +1,5 @@
 #include "service.h"
+#include <iostream>
 
 namespace Network::Services {
         
@@ -52,6 +53,16 @@ void Service::work() {
                     if (this->client_pool_.contains(event.getFd())) {
                         int fd = event.getFd();
                         handler_(client_pool_[fd]);
+                        
+                        if (!client_pool_[fd].isOpened()) {
+                            this->service_.delObserve(fd);
+
+                            client_pool_.erase(fd);
+                            std::cout << "Client disconnected "<< fd << std::endl;
+//                            for_each(client_pool_.begin(), client_pool_.end(), [](auto x){
+ //                               std::cout << x->first() << std::endl;
+ //                           });
+                        }
                     } else {
                         throw std::runtime_error("You've got some problem");
                     }
