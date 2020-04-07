@@ -18,9 +18,7 @@ Socket::Socket(SockType socket_type)
     : Socket(SocketManager::makeSocket(SockType::UDP == socket_type ? SOCK_DGRAM : SOCK_STREAM)) {}
 
 Socket::Socket(Socket&& socket)
-    : is_blocking_(socket.is_blocking_) {
-    close();
-    
+    : is_blocking_(socket.is_blocking_) { 
     sock_ = socket.sock_;
     socket.sock_ = -1;
     

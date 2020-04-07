@@ -11,7 +11,6 @@
 
 #include "non_copyable.h"
 
-
 namespace Network::Services {
 
 struct Event {
@@ -23,14 +22,14 @@ struct Event {
             event_.data.fd = socket;
             event_.events = mode;
         }
-        ~Event() {
-//            close();
+        ~Event() = default;
+
+        int getMode() {
+            return event_.events;
         }
-        inline void close() {
-            if (event_.data.fd != -1) {
-                ::close(event_.data.fd);
-                event_.data.fd = -1;
-            }
+
+        int getFd() {
+            return event_.data.fd;
         }
 
     public:
@@ -44,14 +43,14 @@ class BaseService : NonCopyable {
         BaseService(int flags = 0);
         virtual ~BaseService(); 
 
-        int wait(std::chrono::milliseconds usec);
+        int wait(int usec);
         void process(int active_con, std::function<void(Event&)> func);
 
         void setMaxEvents(std::size_t count);
 
         void setObserve(int socket, uint32_t mode); 
         void modObserve(int socket, uint32_t mode);
-        void delObserve(int scoket, uint32_t mode);
+        void delObserve(int scoket);
 
     private:
         mutable Events events_;

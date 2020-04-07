@@ -18,9 +18,9 @@ BaseService::~BaseService() {
     ::close(epoll_fd_);
 }
 
-int BaseService::wait(std::chrono::milliseconds usec) {
+int BaseService::wait(int usec) {
     int n = epoll_wait(epoll_fd_, reinterpret_cast<epoll_event*>(events_.data()),
-                       events_.size(), usec.count());
+                       events_.size(), usec);
     if (n == -1 && errno != EINTR) {
         throw std::runtime_error(std::string("wait: ") + std::strerror(errno));
     }
@@ -32,14 +32,11 @@ void BaseService::process(int active_con, std::function<void(Event&)> func) {
 }
 
 void BaseService::setMaxEvents(std::size_t count) {
-    // Critical zone
     events_.resize(count);
 }
 
 void BaseService::setObserve(int socket, uint32_t mode) {
-    epoll_event event;
-    event.data.fd = socket;
-    event.events = mode;
+    epoll_event event = {.events = mode, .data = {.fd = socket}};
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket, &event)) {
         throw std::runtime_error(std::string("setObserve: ") + std::strerror(errno));
@@ -47,16 +44,14 @@ void BaseService::setObserve(int socket, uint32_t mode) {
 }
 
 void BaseService::modObserve(int socket, uint32_t mode) {
-    epoll_event event;
-    event.data.fd = socket;
-    event.events = mode;
+    epoll_event event = {.events = mode, .data = {.fd = socket}};
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, socket, &event)) {
         throw std::runtime_error(std::string("modObserve: ") + std::strerror(errno));
     }
 }
 
-void BaseService::delObserve(int socket, uint32_t mode) {
+void BaseService::delObserve(int socket) {
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr)) {
         throw std::runtime_error(std::string("modObserve: ") + std::strerror(errno));
     }
