@@ -53,7 +53,7 @@ void BaseService::modObserve(int socket, uint32_t mode) {
 
 void BaseService::delObserve(int socket) {
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr)) {
-        throw std::runtime_error(std::string("modObserve: ") + std::strerror(errno));
+        throw std::runtime_error(std::string("delObserve: ") + std::strerror(errno));
     }
 }
 

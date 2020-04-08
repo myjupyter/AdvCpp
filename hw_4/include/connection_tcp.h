@@ -21,6 +21,11 @@ class ConnectionTcp : public RWSocket {
         void connect();
         void connect(const IpAddress& addr);
 
+        // Transmit it into .cpp
+        const IpAddress& getInfo() const {
+            return dest_addr_;
+        }
+
         void close();
 
         enum Timeout {

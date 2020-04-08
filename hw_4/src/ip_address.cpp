@@ -34,6 +34,14 @@ void IpAddress::setPort(uint16_t port) {
     addr_.sin_port = htons(port);
 }
 
+std::string IpAddress::getIp() const {
+    return inet_ntoa(addr_.sin_addr);
+}
+
+uint16_t IpAddress::getPort() const {
+    return addr_.sin_port;
+}
+
 sockaddr_in& IpAddress::getSockAddr() {
     return addr_;
 }

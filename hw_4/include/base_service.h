@@ -41,7 +41,7 @@ using Events = std::vector<Event>;
 class BaseService : NonCopyable {
     public:
         BaseService(int flags = 0);
-        virtual ~BaseService(); 
+        ~BaseService(); 
 
         int wait(int usec);
         void process(int active_con, std::function<void(Event&)> func);

@@ -2,6 +2,7 @@
 #define IP_ADDRESS_H_
 
 #include <string>
+#include <optional>
 
 #include <netinet/in.h>
 
@@ -23,7 +24,10 @@ class IpAddress {
         IpAddress& operator=(IpAddress&& address) = default;
 
         void setPort(uint16_t port);
-    
+
+        std::string getIp() const;
+        uint16_t getPort() const;
+
         sockaddr_in& getSockAddr(); 
     
     private: 

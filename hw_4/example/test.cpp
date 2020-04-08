@@ -1,5 +1,7 @@
 #include <iostream>
 #include <cstring>
+#include <thread>
+#include <unistd.h>
 
 #include "service.h"
 
@@ -11,22 +13,31 @@ void func(Client& client_and_data) {
     BytePackage& package = client_and_data.second;
 
     client >> package;
-    
-    std::string buffer;
-    //  клиенту данные отправляются только тогда,
-    //  когда был встречен разделитель "||"
-    //  Тип условие сформированного пакета
-    while (package.getline(buffer, "||")) {
-        client << buffer;
-    }
+    client << package;
 }
 
 int main() {
     try {
         Service service(IpAddress("127.0.0.1", 8080));
-    
+                
         service.setHandler(func);
-        service.work();   
+        
+        std::thread working_thread([&service]() {
+            try {
+                service.work();
+            }
+            catch(std::runtime_error& err) {
+                std::clog << err.what() << std::endl;
+            }
+        });
+        
+        std::thread stop_thread([&service]() {
+            sleep(30);
+            service.stop();
+        });
+
+        working_thread.join();
+        stop_thread.join();
 
     } catch (std::runtime_error& err) {
         std::cout << err.what() << std::endl;

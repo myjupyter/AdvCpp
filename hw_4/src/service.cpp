@@ -19,59 +19,80 @@ void Service::work() {
             throw std::runtime_error("Triggered service without handler!");
          }
         server_->setBlocking(false);
-        server_->setMaxConnections(0xff);
-        
+        server_->setMaxConnections(0xff);        
         server_->listen();
-
         service_.setObserve(server_->getSocket(), EPOLLIN);
 
         while (server_->isOpened()) {
-            int n = service_.wait(-1);
-           
-            // DIY handler
+            int n = service_.wait(100);
+
             service_.process(n, [this](Event& event) {
-                if (event.getMode() == 0) {
+                int mode = event.getMode();
+                int fd = event.getFd();
+                
+                if (mode == 0) {
                     return;
                 }
-                if (event.getFd() == this->server_->getSocket()) {
-                    // Accpets client
-                    Client new_client;
-                    this->server_->accept(new_client);
-                    
-                    // Sets non-blocking mode and registres client in service
-                    new_client.setBlocking(false);
-                    this->service_.setObserve(new_client.getSocket(), EPOLLIN | EPOLLOUT);
-            
-                    // Adds clinet to the pool
-                    int fd = new_client.getSocket();
-                    this->client_pool_.insert({fd, std::move(new_client)});
+                if (fd == this->server_->getSocket()) {
+                    if (!(mode & EPOLLIN)) {
+                        return;
+                    }
+                    makeConnection();    
                 } else {
-                    int mode = event.getMode();
                     if (!(mode & EPOLLIN) || !(mode & EPOLLOUT)) {
                         return;
                     }
-                    if (this->client_pool_.contains(event.getFd())) {
-                        int fd = event.getFd();
-                        handler_(client_pool_[fd]);
-                        
-                        if (!client_pool_[fd].isOpened()) {
-                            this->service_.delObserve(fd);
-
-                            client_pool_.erase(fd);
-                            std::cout << "Client disconnected "<< fd << std::endl;
-//                            for_each(client_pool_.begin(), client_pool_.end(), [](auto x){
- //                               std::cout << x->first() << std::endl;
- //                           });
+                    if (this->client_pool_.contains(fd)) {
+                        try {
+                            handler_(client_pool_[fd]);
+                        } catch (std::runtime_error& err) {
+                            std::cout << err.what() << std::endl;
+                            deleteConnection(fd);
+                            return;
                         }
-                    } else {
-                        throw std::runtime_error("You've got some problem");
-                    }
+                        ConnectionTcp& client = client_pool_[fd].first.getCon();
+                        if (!client.isOpened()) {
+                            deleteConnection(fd);
+                        }
+                    } 
                 }
             });
         }
     } catch(std::runtime_error& err) {
         throw std::runtime_error(std::string("work: \n\t") + std::string(err.what()));
     }
+}
+
+void Service::makeConnection() {
+    Client client_and_package; 
+    ConnectionTcp& new_client = client_and_package.first.getCon();
+
+    this->server_->accept(new_client);
+
+    std::clog << "Connected: " << new_client.getInfo().getIp() << ":" 
+    << new_client.getInfo().getPort() << std::endl;
+
+    new_client.setBlocking(false);
+    this->service_.setObserve(new_client.getSocket(), EPOLLIN | EPOLLOUT);
+
+    int fd = new_client.getSocket();
+    this->client_pool_.insert({fd, std::move(client_and_package)});
+}
+
+void Service::deleteConnection(int fd) {
+    ConnectionTcp& client = client_pool_[fd].first.getCon();
+    std::clog << "Client disconnected: "<< fd
+        << " " << client.getInfo().getIp() << std::endl;
+    std::clog << "Current pool size" << client_pool_.size() << std::endl;                            
+    this->service_.delObserve(fd);
+    client_pool_.erase(fd);
+}
+
+void Service::stop() {
+    service_.delObserve(server_->getSocket());
+    server_->close();
+    
+    client_pool_.clear();
 }
 
 void Service::setHandler(CallBack handler) {
