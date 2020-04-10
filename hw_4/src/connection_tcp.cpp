@@ -36,7 +36,8 @@ void ConnectionTcp::connect() {
     int result = ::connect(getSocket(), reinterpret_cast<sockaddr*>(&dest_addr_.getSockAddr()),
                            sizeof(dest_addr_.getSockAddr()));
     if (result == -1) {
-        throw std::runtime_error(std::string("connect: ") + std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
+                                "ConnectionTcp::connect");;
     }
     setSocketStatus(Socket::OK);
 }
@@ -51,7 +52,7 @@ void ConnectionTcp::connect(const IpAddress& addr) {
         new_connection.connect();
         *this = std::move(new_connection);
     } catch (std::runtime_error& err) {
-        throw std::runtime_error("connect: " +  std::string(err.what()));
+        throw std::runtime_error("ConnectionTcp::connect:" + std::string(err.what()));
     }
 }
 void ConnectionTcp::setTimeout(std::chrono::seconds time, Timeout type) {

@@ -5,9 +5,9 @@
 #include <unistd.h>
 #include <cstring>
 #include <vector>
-#include <stdexcept>
 #include <chrono>
 #include <functional>
+#include <system_error>
 
 #include "non_copyable.h"
 
@@ -43,18 +43,21 @@ class BaseService : NonCopyable {
         BaseService(int flags = 0);
         ~BaseService(); 
 
-        int wait(int usec);
+        int wait();
         void process(int active_con, std::function<void(Event&)> func);
 
         void setMaxEvents(std::size_t count);
+        void setTimeout(int usec);
+        void setTimeout(std::chrono::milliseconds usec);
 
         void setObserve(int socket, uint32_t mode); 
         void modObserve(int socket, uint32_t mode);
         void delObserve(int scoket);
 
     private:
-        mutable Events events_;
         int epoll_fd_;
+        mutable Events events_;
+        mutable int timeout_usec_;
 };
 
 }   // namespace Network::Services 

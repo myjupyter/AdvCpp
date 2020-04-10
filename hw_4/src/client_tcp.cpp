@@ -42,8 +42,7 @@ bool BytePackage::hasData() const {
 
 ClientTcp& ClientTcp::operator>>(std::string& package) {
     std::string buffer(BUFFER_SIZE, '\0');
-    connection_.read(buffer.data(), buffer.size() - 1);
-    if (std::strlen(buffer.data())) {
+    if (connection_.read(buffer.data(), buffer.size() - 1)) {
         std::copy(buffer.begin(), buffer.end(), std::back_inserter(package));
     }
     return *this;
@@ -51,8 +50,7 @@ ClientTcp& ClientTcp::operator>>(std::string& package) {
 
 ClientTcp& ClientTcp::operator>>(BytePackage& package) {
     std::string buffer(BUFFER_SIZE, '\0');
-    connection_.read(buffer.data(), buffer.size() - 1);
-    if (std::strlen(buffer.data())) {
+    if (connection_.read(buffer.data(), buffer.size() - 1)) {
         package << buffer;
     }
     return *this;

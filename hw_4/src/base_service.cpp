@@ -8,9 +8,11 @@ namespace Network::Services {
 
 BaseService::BaseService(int flags)
     : epoll_fd_(epoll_create1(flags))
-    , events_(MAX_EVENTS) {
+    , events_(MAX_EVENTS)
+    , timeout_usec_(-1) {
     if (epoll_fd_ == -1) {
-        throw std::runtime_error(std::string("epoll: ") + std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
+                                "BaseService::BaseService");
     }
 }
 
@@ -18,11 +20,12 @@ BaseService::~BaseService() {
     ::close(epoll_fd_);
 }
 
-int BaseService::wait(int usec) {
+int BaseService::wait() {
     int n = epoll_wait(epoll_fd_, reinterpret_cast<epoll_event*>(events_.data()),
-                       events_.size(), usec);
+                       events_.size(), timeout_usec_);
     if (n == -1 && errno != EINTR) {
-        throw std::runtime_error(std::string("wait: ") + std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
+                                "BaseService::wait");
     }
     return n;
 }
@@ -35,11 +38,22 @@ void BaseService::setMaxEvents(std::size_t count) {
     events_.resize(count);
 }
 
+void BaseService::setTimeout(int usec) {
+    if (usec < -1) 
+        return;
+    timeout_usec_ = usec;
+}
+
+void BaseService::setTimeout(std::chrono::milliseconds usec) {
+    timeout_usec_ = usec.count();
+}
+
 void BaseService::setObserve(int socket, uint32_t mode) {
     epoll_event event = {.events = mode, .data = {.fd = socket}};
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket, &event)) {
-        throw std::runtime_error(std::string("setObserve: ") + std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
+                                "BaseService::setObserve");
     }
 }
 
@@ -47,13 +61,16 @@ void BaseService::modObserve(int socket, uint32_t mode) {
     epoll_event event = {.events = mode, .data = {.fd = socket}};
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, socket, &event)) {
-        throw std::runtime_error(std::string("modObserve: ") + std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
+                                "BaseService::modObserve");
     }
 }
 
 void BaseService::delObserve(int socket) {
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr)) {
-        throw std::runtime_error(std::string("delObserve: ") + std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
+                                "BaseService::delObserve");
+
     }
 }
 

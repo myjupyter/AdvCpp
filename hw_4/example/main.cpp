@@ -7,8 +7,8 @@ using namespace Network;
 using namespace Network::Services;
 
 void func(Client& client_and_data) {
-    ClientTcp& client = client_and_data.first;
-    BytePackage& package = client_and_data.second;
+
+    auto& [client, package] = client_and_data;
 
     client >> package;
     

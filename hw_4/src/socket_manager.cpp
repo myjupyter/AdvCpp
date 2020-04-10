@@ -7,7 +7,8 @@ namespace  SocketManager {
 int makeSocket(int type) {
     int sock = socket(AF_INET, type, 0);
     if (sock < 0) {
-        throw std::runtime_error(std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
+                                "SocketManager::makeSocket");
     }
     return sock;
 }
@@ -15,14 +16,16 @@ int makeSocket(int type) {
 int bindSocket(int socket, IpAddress& addr) { 
     if (bind(socket, reinterpret_cast<sockaddr*>(&addr.getSockAddr()),
              sizeof(addr.getSockAddr())) < 0) {
-            throw std::runtime_error(std::strerror(errno));
+            throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
+                                    "SocketManager::bindSocket");
     }
     return socket;
 }
 
 void listenSocket(int socket, int count) {
     if (listen(socket, count) < -1) {
-        throw std::runtime_error(std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
+                                "SocketManager::listenSocket");
     }
 }
     
@@ -32,7 +35,8 @@ int accept(int socket, IpAddress& addr) {
     int client_socket = ::accept(socket, reinterpret_cast<sockaddr*>(&addr.getSockAddr()),
                                  &length);
     if (client_socket == -1) {
-        throw std::runtime_error(std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
+                                "SocketManager::accept");
     }
     return client_socket;
 }

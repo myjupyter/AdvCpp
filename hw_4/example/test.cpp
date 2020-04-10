@@ -9,9 +9,10 @@ using namespace Network;
 using namespace Network::Services;
 
 void func(Client& client_and_data) {
-    ClientTcp& client = client_and_data.first;
-    BytePackage& package = client_and_data.second;
+//    ClientTcp& client = client_and_data.first;
+//    BytePackage& package = client_and_data.second;
 
+    auto& [client, package] = client_and_data;
     client >> package;
     client << package;
 }
@@ -39,6 +40,7 @@ int main() {
         working_thread.join();
         stop_thread.join();
 
+        std::clog << "Completed normally" << std::endl;
     } catch (std::runtime_error& err) {
         std::cout << err.what() << std::endl;
     }

@@ -32,7 +32,8 @@ std::size_t RWSocket::write(const void* data, std::size_t size) {
     }
     if (bytes == -1 && errno != EPIPE) {
         setSocketStatus(Socket::DISCONNECT);
-        throw std::runtime_error(std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
+                                "RWSocket::write");
     } 
     return static_cast<std::size_t>(bytes);  
 }
@@ -44,7 +45,7 @@ void RWSocket::writeExact(const void* data, std::size_t size) {
         old_rest = rest;
         rest += write(static_cast<const char*>(data) + rest, size - rest);
         if((rest - old_rest) == 0) {
-            throw std::runtime_error("writeExact: " + std::to_string(rest) + \
+            throw std::runtime_error("RWSocket::writeExact: " + std::to_string(rest) + \
                     "/" + std::to_string(size) + " bytes were sent");
         }
     }
@@ -59,7 +60,8 @@ std::size_t RWSocket::read(void* data, std::size_t size) {
     if (bytes == -1 && !IS_NONBLOCK_ERRNO() &&
         errno != ECONNRESET) {
         setSocketStatus(Socket::DISCONNECT);
-        throw std::runtime_error(std::strerror(errno));
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
+                                "RWSocket::read");
     } else if ((bytes == 0) ||
                 bytes == -1 && errno == ECONNRESET) {
         setSocketStatus(Socket::DISCONNECT);
@@ -77,7 +79,7 @@ void RWSocket::readExact(void* data, std::size_t size) {
         old_rest = rest;
         rest += read(static_cast<char*>(data) + rest, size - rest);
         if ((rest - old_rest) == 0) {
-            throw std::runtime_error("readExact: " + std::to_string(rest) + \
+            throw std::runtime_error("RWSocket::readExact: " + std::to_string(rest) + \
                     "/" + std::to_string(size) + " bytes were recieved");
         }
     }

@@ -27,7 +27,7 @@ void ServerTcp::listen() {
     try {
         SocketManager::listenSocket(getSocket(), max_connections_); 
     } catch (std::runtime_error& err) {
-        throw std::runtime_error(std::string("listen: ") + std::string(err.what()));
+        throw std::runtime_error(std::string("ServerTcp::listen:") + std::string(err.what()));
     }
 }
 
@@ -38,7 +38,7 @@ void ServerTcp::accept(ConnectionTcp& connection) {
         ConnectionTcp new_connection(socket, client_address);
         connection = std::move(new_connection); 
     } catch (std::runtime_error& err) {
-        throw std::runtime_error("accept: " + std::string(err.what()));
+        throw std::runtime_error("ServerTcp::accept:" + std::string(err.what()));
     }
 }
 
@@ -53,7 +53,7 @@ void ServerTcp::restart(const IpAddress& address) {
         new_server.listen();
         *this = std::move(new_server);
     } catch (std::runtime_error& err) {
-        throw std::runtime_error("restart: " + std::string(err.what()));
+        throw std::runtime_error("ServerTcp::restart:" + std::string(err.what()));
     }    
 }
 

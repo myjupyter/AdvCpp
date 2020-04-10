@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <cstring>
-#include <stdexcept>
+#include <system_error>
 
 #include "non_copyable.h"
 #include "socket_manager.h"

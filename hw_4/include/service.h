@@ -21,14 +21,13 @@ using CallBack   = std::function<void(Client&)>;
 class Service : NonCopyable {
     public:
         Service();
-        Service(const IpAddress& address, CallBack handler_ = nullptr);
+        explicit Service(const IpAddress& address, CallBack handler_ = nullptr);
         ~Service() = default;
 
         void work();
         void stop();
 
         void setHandler(std::function<void(Client&)>);
-
     private:
         void makeConnection();
         void deleteConnection(int fd);

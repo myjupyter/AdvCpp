@@ -2,7 +2,7 @@
 #include <iostream>
 
 namespace Network::Services {
-        
+
 Service::Service()
     : server_(std::make_unique<ServerTcp>(IpAddress("127.0.0.1", 8080)))
     , service_(0)
@@ -13,31 +13,32 @@ Service::Service(const IpAddress& address, CallBack handler)
     , service_(0)
     , handler_(handler) {}
 
+
 void Service::work() {
     try {
         if (handler_ == nullptr) {
             throw std::runtime_error("Triggered service without handler!");
-         }
+        }
         server_->setBlocking(false);
         server_->setMaxConnections(0xff);        
         server_->listen();
         service_.setObserve(server_->getSocket(), EPOLLIN);
 
         while (server_->isOpened()) {
-            int n = service_.wait(100);
+            int n = service_.wait();
 
             service_.process(n, [this](Event& event) {
                 int mode = event.getMode();
                 int fd = event.getFd();
-                
-                if (mode == 0) {
+
+                if (mode == 0) { 
                     return;
                 }
                 if (fd == this->server_->getSocket()) {
                     if (!(mode & EPOLLIN)) {
                         return;
                     }
-                    makeConnection();    
+                    this->makeConnection();    
                 } else {
                     if (!(mode & EPOLLIN) || !(mode & EPOLLOUT)) {
                         return;
@@ -45,21 +46,21 @@ void Service::work() {
                     if (this->client_pool_.contains(fd)) {
                         try {
                             handler_(client_pool_[fd]);
-                        } catch (std::runtime_error& err) {
-                            std::cout << err.what() << std::endl;
-                            deleteConnection(fd);
+                        } catch (std::exception& err) {
+                            std::clog << err.what() << std::endl;
+                            this->deleteConnection(fd);
                             return;
                         }
                         ConnectionTcp& client = client_pool_[fd].first.getCon();
                         if (!client.isOpened()) {
-                            deleteConnection(fd);
-                        }
+                            this->deleteConnection(fd);
+                        }   
                     } 
                 }
             });
         }
     } catch(std::runtime_error& err) {
-        throw std::runtime_error(std::string("work: \n\t") + std::string(err.what()));
+        throw std::runtime_error(std::string("Service::work:") + std::string(err.what()));
     }
 }
 
@@ -69,8 +70,11 @@ void Service::makeConnection() {
 
     this->server_->accept(new_client);
 
-    std::clog << "Connected: " << new_client.getInfo().getIp() << ":" 
-    << new_client.getInfo().getPort() << std::endl;
+    std::clog << "Connected: " 
+              << new_client.getInfo().getIp() 
+              << ":" 
+              << new_client.getInfo().getPort() 
+              << std::endl;
 
     new_client.setBlocking(false);
     this->service_.setObserve(new_client.getSocket(), EPOLLIN | EPOLLOUT);
@@ -81,17 +85,27 @@ void Service::makeConnection() {
 
 void Service::deleteConnection(int fd) {
     ConnectionTcp& client = client_pool_[fd].first.getCon();
-    std::clog << "Client disconnected: "<< fd
-        << " " << client.getInfo().getIp() << std::endl;
-    std::clog << "Current pool size" << client_pool_.size() << std::endl;                            
-    this->service_.delObserve(fd);
+    
+    std::clog << "Client disconnected: " 
+              << fd
+              << " " 
+              << client.getInfo().getIp() 
+              << client.getInfo().getPort()
+              << std::endl;
+    
+    std::clog << "Still connected client: " 
+              << client_pool_.size() 
+              << std::endl;                            
+    try {
+        this->service_.delObserve(fd);
+    } catch (std::system_error& err) {}
     client_pool_.erase(fd);
 }
 
 void Service::stop() {
     service_.delObserve(server_->getSocket());
     server_->close();
-    
+
     client_pool_.clear();
 }
 

@@ -27,8 +27,6 @@ class BytePackage {
         std::size_t current_pos_ = 0;
 };
 
-static const int BUFFER_SIZE = 4097;
-
 class ClientTcp : NonCopyable {
     public:
         ClientTcp() = default;

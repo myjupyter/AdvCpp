@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <chrono>
-#include <stdexcept>
+#include <system_error>
 
 #include "ip_address.h"
 
