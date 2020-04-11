@@ -1,4 +1,5 @@
 #include "client_tcp.h"
+#include <iostream>
 
 static const int BUFFER_SIZE = 4097;
 
@@ -25,12 +26,33 @@ bool BytePackage::getline(std::string& data, const std::string& delim) {
     }
 
     std::size_t new_current = data_.find(delim, current_pos_);
-    if (new_current > data_.size() - 1) {
+    if (!data_.empty() && new_current > data_.size() - 1) {
         return false;
     }
 
     data = std::move(std::string(data_.begin() + current_pos_, data_.begin() + new_current));
     current_pos_ = new_current + delim.size();
+    return true;
+}
+
+bool BytePackage::getline(std::string& data, const std::string& delim,
+                          std::size_t chunk_size) {
+    if (!hasData()) {
+        return false;
+    }
+
+    std::size_t new_current = data_.find(delim, current_pos_);
+    if (!data_.empty() && new_current > data_.size() - 1) {
+        return false;
+    }
+
+    if (new_current - current_pos_ > chunk_size) {
+        data = std::move(std::string(data_.begin() + current_pos_, data_.begin() + current_pos_ + chunk_size));
+        current_pos_ += chunk_size;
+    } else {
+        data = std::move(std::string(data_.begin() + current_pos_, data_.begin() + new_current));
+        current_pos_ = new_current + delim.size();
+    }
     return true;
 }
 

@@ -19,6 +19,8 @@ class BytePackage {
         BytePackage& operator<<(const std::string& data);
         BytePackage& operator>>(std::string& data);
         bool getline(std::string& data, const std::string& delim); 
+        bool getline(std::string& data, const std::string& delim,
+                     std::size_t chunk_size);
 
     private:
         bool hasData() const;

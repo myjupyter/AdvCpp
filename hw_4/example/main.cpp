@@ -11,7 +11,7 @@ void func(Client& client_and_data) {
     auto& [client, package] = client_and_data;
 
     client >> package;
-    
+
     std::string buffer;
     //  клиенту данные отправляются только тогда,
     //  когда был встречен разделитель "||"

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-python3 -c "print('a'*10000)" > ./message
+python3 -c "print('a'*1000000)" > ./message
 
-valgrind ../test.out &
+../server.out &
 
 for i in $(seq 4024); do 
     cat message | nc localhost 8080 > /dev/null &
