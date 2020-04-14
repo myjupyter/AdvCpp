@@ -1,7 +1,7 @@
 #ifndef NON_COPYABLE_H_
 #define NON_COPYABLE_H_
 
-namespace SharedMemory {
+namespace shm {
 
 class NonCopyable {
     protected:
