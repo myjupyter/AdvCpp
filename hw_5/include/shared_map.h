@@ -1,0 +1,125 @@
+#ifndef SHARED_MAP_H_
+#define SHARED_MAP_H_
+
+
+#include <map>
+#include <utility>
+
+#include "allocator.h"
+#include "semaph.h"
+
+namespace shm {
+
+// configs
+static const int kPages = 4;
+static const std::size_t kBytes = kPages * ::sysconf(_SC_PAGE_SIZE);
+
+
+template <
+    class Key,
+    class T,
+    class Compare = std::less<Key>,
+    class Alloc = Allocator<std::pair<const Key, T> > 
+> class Map {
+    public:
+        
+        using map        = std::map<Key, T, Compare, Alloc>;
+        using value_type = std::pair<const Key, T>;
+
+    public:
+        Map(SharedMemory<value_type>& memory);
+       /*explicit Map(const Compare& comp,
+                     const Allocator& alloc = Allocator()) = default;
+        explicit Map(const Allocator& alloc) = default;
+        Map(const Map& map) = default;
+        Map(const Map& map, const Allocator& alloc) = default;
+        Map(Map&& map) = default;
+        Map(Map&& map, const Allocator& alloc) = default;
+        */
+        ~Map() {
+            map_->~map(); 
+        }
+
+        //Iterators
+        map::iterator begin() {
+            return map_->begin();
+        }
+        map::iterator end() {
+            return map_->end();
+        }
+
+        //Modifiers
+
+        
+        void insert(const value_type& value) {
+            SemaphoreLock lock(semaph_);
+            map_->insert(std::forward<value_type>(value));
+        }
+
+        template <typename P>
+        void insert(P&& value) {
+            SemaphoreLock lock(semaph_);
+            map_->insert(std::forward<P>(value));
+        }
+        
+        void insert(value_type&& value) {
+            SemaphoreLock lock(semaph_);
+            map_->insert(std::forward<value_type>(value));
+        }
+
+    private:
+        map* map_;
+        Semaphore semaph_;
+};
+
+// Constructors 
+template <
+    class Key,
+    class T,
+    class Compare,
+    class Alloc 
+> Map<Key, T, Compare, Alloc>::Map(SharedMemory<value_type>& memory) {
+    Allocator<value_type> alloc(memory);
+    
+    Semaphore sem(memory.getSemPtr(), 1, true);    
+    semaph_ = std::move(sem);
+
+    map_ = new (memory.takeMemory(sizeof(map))) map{alloc};
+}
+
+/*
+// Iterators
+template <
+    class Key,
+    class T,
+    class Compare,
+    class Alloc 
+> map::iterator 
+Map<Key, T, Compare, Alloc>::begin() {
+    return map_->begin();    
+}
+
+template <
+    class Key,
+    class T,
+    class Compare,
+    class Alloc 
+> map::iterator 
+Map<Key, T, Compare, Alloc>::end() {
+    return map_->end();    
+}
+
+// Modifiers
+template <
+    class Key,
+    class T,
+    class Compare,
+    class Alloc 
+> void 
+Map<Key, T, Compare, Alloc>::insert(const value_type& value) {
+    return map_->insert(value);
+}
+*/
+}  // namespace shm
+
+#endif  // SHRED_MAP_H_

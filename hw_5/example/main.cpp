@@ -12,48 +12,76 @@
 #include "shared_memory.h"
 #include "semaph.h"
 #include "allocator.h"
+#include "shared_map.h"
 
 using namespace shm;
-using shared_vector = std::vector<int, Allocator<int>>;
+using shared_vector = std::vector<int, shm::Allocator<int>>;
 
+
+using pair       = std::pair<const int, int>;
+using shared_map = std::map<int, int, std::less<int>, Allocator<pair> >;
 
 int main() {
-    SharedMemory<int> mem_ptr(4096);
 
-    Allocator<int> alloc(mem_ptr);
-    shared_vector* vec = new (mem_ptr.takeMemory(sizeof(shared_vector))) shared_vector{alloc};
+    SharedMemory<pair> mem_ptr(4096);
+    Map<int, int> map(mem_ptr); 
 
-    std::cout << mem_ptr.getFreeMemory() << std::endl;
+    pid_t pid = fork();
+    if (pid != 0) {
+        map.insert({4, 4});
+        map.insert({5, 4});
+        map.insert({1, 4});
+        
+        } else {
+        map.insert({6, 4});
+        map.insert({7, 4});
+        map.insert({2, 4});
+        
+        return 0;        
+    }
+
+    int p;
+    wait(&p);
+
+    std::for_each(map.begin(), map.end(), [](auto& x){
+        std::cout << x.first << ":" << x.second << std::endl;     
+    });
+
+/*
+    SharedMemory<pair> mem_ptr(4096);
+
+    Allocator<pair> alloc(mem_ptr);
+
+    
+//    shared_vector* vec = new (mem_ptr.takeMemory(sizeof(shared_vector))) shared_vector{alloc};
+    shared_map* vec = new (mem_ptr.takeMemory(sizeof(shared_map))) shared_map{alloc};
 
     Semaphore sem(mem_ptr.getSemPtr(), 1, true);    
 
     pid_t pid = fork();
     if (pid != 0) {
         SemaphoreLock lock(sem);
-        vec->push_back(1);
-        vec->push_back(3);
-        vec->push_back(5);
-        vec->push_back(7);
-    
-        vec->~vector();
+        vec->insert({0, 0});
+        vec->insert({2, 2});
+        vec->insert({1, 1});
     } else {
         SemaphoreLock lock(sem);
-        vec->push_back(2);
-        vec->push_back(4);
-        vec->push_back(6);
-
+        vec->insert({3, 3});
+        vec->insert({1, 5});
+        vec->insert({5, 6});
+        
         return 0;        
     }
 
     int p;
     wait(&p);
    
-    std::for_each(vec->begin(), vec->end(), [](auto x){
-        std::cout << x << std::endl;        
+    std::for_each(vec->begin(), vec->end(), [](auto& x){
+        std::cout << x.first <<":" << x.second << std::endl;
     });
 
     return 0;
-    
+  */  
     
     /*    
     int size = 8;

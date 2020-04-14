@@ -96,10 +96,35 @@ class Allocator {
         using pointer    = Type*;
         using value_type = Type;
 
-    public:
-        Allocator(SharedMemory<value_type>& resource)
-            : memory_(resource.ptr_.get(), resource.offset_){}
+        template <typename U>
+        struct rebind {
+            typedef Allocator<U> other;
+        };
 
+    public:
+
+        Allocator(const Allocator<value_type>& alloc)
+            : memory_(alloc.memory_) {}
+    
+        template <typename U>
+        Allocator(const Allocator<U>& alloc)
+            : memory_(alloc.memory_) {}
+
+
+        Allocator& operator=(const Allocator<value_type>& alloc) {
+            memory_ = alloc.memory_;
+            return *this;
+        }
+        
+        template <typename U>
+        Allocator& operator=(const Allocator<U>& alloc) {
+            memory_ = alloc.memory_;
+            return *this;
+        }
+        
+        explicit Allocator(SharedMemory<value_type>& resource)
+            : memory_(resource.ptr_.get(), resource.offset_){}
+ 
         ~Allocator() = default;
 
         pointer allocate(std::size_t n) {
@@ -121,6 +146,20 @@ class Allocator {
     public:
         Memory memory_;
 };
+
+
+//заглушки
+template <class Type, class U>
+bool operator==(const Allocator<Type>&, 
+                const Allocator<U>&) {
+    return true;
+}
+ 
+template <class Type, class U>
+bool operator!=(const Allocator<Type>&, 
+                const Allocator<U>&)  {
+    return false;
+}
 
 }  // namespace sh
 
