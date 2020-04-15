@@ -23,8 +23,10 @@ template <
 > class Map {
     public:
         
-        using map        = std::map<Key, T, Compare, Alloc>;
-        using value_type = std::pair<const Key, T>;
+        using map_type        = std::map<Key, T, Compare, Alloc>;
+        using value_type      = std::pair<const Key, T>;
+        using allocator_type  = Allocator<value_type>; 
+        using size_type       = std::size_t;
 
     public:
         Map(SharedMemory<value_type>& memory);
@@ -40,35 +42,78 @@ template <
             map_->~map(); 
         }
 
+        
+        allocator_type get_allocator() const {
+            return map_->get_allocator();
+        }
+
+
         //Iterators
-        map::iterator begin() {
+        map_type::iterator begin() {
             return map_->begin();
         }
-        map::iterator end() {
+        map_type::iterator end() {
             return map_->end();
         }
 
-        //Modifiers
 
-        
-        void insert(const value_type& value) {
+        // Elements access 
+        T& at(const Key& key) {
             SemaphoreLock lock(semaph_);
-            map_->insert(std::forward<value_type>(value));
+            return map_->at(key);
+        }
+
+        const T& at(const Key& key) const {
+            SemaphoreLock lock(semaph_);
+            return map_->at(key);
+        } 
+       
+        T& operator[](const Key& key) {
+            SemaphoreLock lock(semaph_);
+            return map_->operator[](key);
+        }
+
+        T& operator[](Key&& key) {
+            SemaphoreLock lock(semaph_);
+            return map_->operator[](key);
+        }
+
+        //Modifiers
+        auto insert(const value_type& value) {
+            SemaphoreLock lock(semaph_);
+            return map_->insert(std::forward<value_type>(value));
         }
 
         template <typename P>
-        void insert(P&& value) {
+        auto insert(P&& value) {
             SemaphoreLock lock(semaph_);
-            map_->insert(std::forward<P>(value));
+            return map_->insert(std::forward<P>(value));
         }
         
-        void insert(value_type&& value) {
+        auto insert(value_type&& value) {
             SemaphoreLock lock(semaph_);
-            map_->insert(std::forward<value_type>(value));
+            return map_->insert(std::forward<value_type>(value));
         }
 
+        void erase(map_type::iterator pos) {
+            SemaphoreLock lock(semaph_);
+            map_->erase(pos);
+        }
+        
+        size_type erase(const Key& key) {
+            SemaphoreLock lock(semaph_);
+            return map_->erase(key);
+        }
+
+        void clear() noexcept {
+            SemaphoreLock lock(semaph_);
+            return map_->clear(); 
+        }
+
+
+
     private:
-        map* map_;
+        map_type* map_;
         Semaphore semaph_;
 };
 
@@ -84,7 +129,7 @@ template <
     Semaphore sem(memory.getSemPtr(), 1, true);    
     semaph_ = std::move(sem);
 
-    map_ = new (memory.takeMemory(sizeof(map))) map{alloc};
+    map_ = new (memory.takeMemory(sizeof(map_type))) map_type{alloc};
 }
 
 /*
