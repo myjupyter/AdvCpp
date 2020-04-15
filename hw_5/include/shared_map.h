@@ -29,7 +29,7 @@ template <
         using size_type       = std::size_t;
 
     public:
-        Map(SharedMemory<value_type>& memory);
+        Map();
        /*explicit Map(const Compare& comp,
                      const Allocator& alloc = Allocator()) = default;
         explicit Map(const Allocator& alloc) = default;
@@ -113,6 +113,8 @@ template <
 
 
     private:
+        shared_shptr<value_type> memory_;
+        
         map_type* map_;
         Semaphore semaph_;
 };
@@ -123,13 +125,15 @@ template <
     class T,
     class Compare,
     class Alloc 
-> Map<Key, T, Compare, Alloc>::Map(SharedMemory<value_type>& memory) {
-    Allocator<value_type> alloc(memory);
+> Map<Key, T, Compare, Alloc>::Map() 
+    : memory_(makeShmem<value_type>(kBytes)) {
+    SharedMemory mem(reinterpret_cast<void*>(memory_.get()), kBytes);
+    Allocator<value_type> alloc(mem);
     
-    Semaphore sem(memory.getSemPtr(), 1, true);    
+    Semaphore sem(mem.getSemPtr(), 1, true);    
     semaph_ = std::move(sem);
 
-    map_ = new (memory.takeMemory(sizeof(map_type))) map_type{alloc};
+    map_ = new (mem.takeMemory(sizeof(map_type))) map_type{alloc};
 }
 
 /*
