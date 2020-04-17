@@ -47,6 +47,22 @@ SharedMemory& SharedMemory::operator=(SharedMemory&& shared_mem) {
     return *this;
 }
 
+bool SharedMemory::operator==(SharedMemory& shared_map) {
+    if (ptr_    != shared_map.ptr_ ||
+        offset_ != shared_map.offset_) {
+        return false;
+    }
+    return true;
+}
+
+bool SharedMemory::operator!=(SharedMemory& shared_map) {
+    if (ptr_    != shared_map.ptr_ ||
+        offset_ != shared_map.offset_) {
+        return  true;
+    }
+    return false;
+}
+
 std::size_t SharedMemory::getSize() const {
     return *(reinterpret_cast<std::size_t*>(ptr_));
 }

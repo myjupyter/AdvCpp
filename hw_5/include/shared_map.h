@@ -1,12 +1,12 @@
 #ifndef SHARED_MAP_H_
 #define SHARED_MAP_H_
 
-
 #include <map>
 #include <utility>
 
 #include "allocator.h"
 #include "semaph.h"
+#include "non_copyable.h"
 
 namespace shm {
 
@@ -14,30 +14,47 @@ namespace shm {
 static const int kPages = 4;
 static const std::size_t kBytes = kPages * ::sysconf(_SC_PAGE_SIZE);
 
-
 template <
     class Key,
     class T,
     class Compare = std::less<Key>,
     class Alloc = Allocator<std::pair<const Key, T> > 
-> class Map {
-    public:
-        
+> class Map : NonCopyable {
+    public:        
         using map_type        = std::map<Key, T, Compare, Alloc>;
         using value_type      = std::pair<const Key, T>;
         using allocator_type  = Allocator<value_type>; 
         using size_type       = std::size_t;
 
     public:
-        Map();
-       /*explicit Map(const Compare& comp,
-                     const Allocator& alloc = Allocator()) = default;
-        explicit Map(const Allocator& alloc) = default;
-        Map(const Map& map) = default;
-        Map(const Map& map, const Allocator& alloc) = default;
-        Map(Map&& map) = default;
-        Map(Map&& map, const Allocator& alloc) = default;
-        */
+        Map() : memory_(makeShmem<value_type>(kBytes)) {
+            SharedMemory mem(reinterpret_cast<void*>(memory_.get()), kBytes);
+            Allocator<value_type> alloc(mem);
+                
+            Semaphore sem(mem.getSemPtr(), 1, true);    
+            semaph_ = std::move(sem);
+
+            map_ = new (mem.takeMemory(sizeof(map_type))) map_type{alloc};
+        }
+
+        Map(Map&& map)
+            :  memory_(std::move(map.memory_))
+            ,  map_(map.map_)
+            ,  semaph_(std::move(map.semaph_)) {
+            map.map_ = nullptr;
+        }
+
+        Map& operator=(Map&& map) {
+            if (this != &map) {
+                memory_ = std::move(map.memory_);
+                map_    = map.map_;
+                semaph_ = std::move(map.semaph_);
+
+                map.map_ = nullptr;
+            }
+            return *this;
+        }
+        
         ~Map() {
             map_->~map(); 
         }
@@ -46,7 +63,6 @@ template <
         allocator_type get_allocator() const {
             return map_->get_allocator();
         }
-
 
         //Iterators
         map_type::iterator begin() {
@@ -110,8 +126,6 @@ template <
             return map_->clear(); 
         }
 
-
-
     private:
         shared_shptr<value_type> memory_;
         
@@ -119,56 +133,6 @@ template <
         Semaphore semaph_;
 };
 
-// Constructors 
-template <
-    class Key,
-    class T,
-    class Compare,
-    class Alloc 
-> Map<Key, T, Compare, Alloc>::Map() 
-    : memory_(makeShmem<value_type>(kBytes)) {
-    SharedMemory mem(reinterpret_cast<void*>(memory_.get()), kBytes);
-    Allocator<value_type> alloc(mem);
-    
-    Semaphore sem(mem.getSemPtr(), 1, true);    
-    semaph_ = std::move(sem);
-
-    map_ = new (mem.takeMemory(sizeof(map_type))) map_type{alloc};
-}
-
-/*
-// Iterators
-template <
-    class Key,
-    class T,
-    class Compare,
-    class Alloc 
-> map::iterator 
-Map<Key, T, Compare, Alloc>::begin() {
-    return map_->begin();    
-}
-
-template <
-    class Key,
-    class T,
-    class Compare,
-    class Alloc 
-> map::iterator 
-Map<Key, T, Compare, Alloc>::end() {
-    return map_->end();    
-}
-
-// Modifiers
-template <
-    class Key,
-    class T,
-    class Compare,
-    class Alloc 
-> void 
-Map<Key, T, Compare, Alloc>::insert(const value_type& value) {
-    return map_->insert(value);
-}
-*/
 }  // namespace shm
 
 #endif  // SHRED_MAP_H_

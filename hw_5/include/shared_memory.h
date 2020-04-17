@@ -40,6 +40,9 @@ class SharedMemory {
         SharedMemory& operator=(const SharedMemory& shared_mem);
         SharedMemory(SharedMemory&& shared_mem);
         SharedMemory& operator=(SharedMemory&& shared_mem);
+        
+        bool operator==(SharedMemory& shared_map);
+        bool operator!=(SharedMemory& shared_map);
 
         ~SharedMemory() = default;
 

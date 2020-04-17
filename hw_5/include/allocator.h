@@ -45,7 +45,7 @@ class Allocator {
             return *this;
         }
 
-        Allocator(SharedMemory memory)
+        Allocator(SharedMemory& memory)
             : memory_(memory) {}
 
         ~Allocator() = default;
@@ -71,17 +71,16 @@ class Allocator {
 };
 
 
-//заглушки
 template <class Type, class U>
-bool operator==(const Allocator<Type>&, 
-                const Allocator<U>&) {
-    return true;
+bool operator==(const Allocator<Type>& map_l, 
+                const Allocator<U>&    map_r) {
+    return map_l.memory_ == map_r.memory_;
 }
  
 template <class Type, class U>
-bool operator!=(const Allocator<Type>&, 
-                const Allocator<U>&)  {
-    return false;
+bool operator!=(const Allocator<Type>& map_l, 
+                const Allocator<U>&    map_r)  {
+    return map_l.memory_ != map_r.memory_;
 }
 
 }  // namespace sh
