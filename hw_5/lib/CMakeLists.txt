@@ -1,5 +1,4 @@
-set(LIB_SRCS ${SRC_DIR}/shared_memory.cpp
-             ${SRC_DIR}/semaph.cpp)
+set(LIB_SRCS ${SRC_DIR}/semaph.cpp)
 
 add_library(${LIB_NAME} SHARED ${LIB_SRCS})
 

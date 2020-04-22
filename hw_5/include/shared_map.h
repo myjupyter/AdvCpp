@@ -28,13 +28,12 @@ template <
 
     public:
         Map() : memory_(makeShmem<value_type>(kBytes)) {
-            SharedMemory mem(reinterpret_cast<void*>(memory_.get()), kBytes);
-            Allocator<value_type> alloc(mem);
+            Allocator<value_type> alloc(reinterpret_cast<void*>(memory_.get()), kBytes);
                 
-            Semaphore sem(mem.getSemPtr(), 1, true);    
+            Semaphore sem(alloc.getSemPtr(), 1, true);    
             semaph_ = std::move(sem);
 
-            map_ = new (mem.takeMemory(sizeof(map_type))) map_type{alloc};
+            map_ = new (alloc.allocate(sizeof(map_type))) map_type{alloc};
         }
 
         Map(Map&& map)
@@ -127,7 +126,7 @@ template <
         }
 
     private:
-        shared_shptr<value_type> memory_;
+        inter_proc_mem<value_type> memory_;
         
         map_type* map_;
         Semaphore semaph_;

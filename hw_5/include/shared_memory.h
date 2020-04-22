@@ -14,10 +14,10 @@
 namespace shm {
 
 template <typename Type>
-using shared_shptr = std::shared_ptr<Type>;
+using inter_proc_mem = std::unique_ptr<Type, std::function<void(Type*)>>;
 
 template <typename Type>
-shared_shptr<Type> makeShmem(std::size_t n) {
+inter_proc_mem<Type> makeShmem(std::size_t n) {
     constexpr int PROT = PROT_READ | PROT_WRITE;
     constexpr int MAP  = MAP_SHARED | MAP_ANONYMOUS;
 
@@ -31,38 +31,6 @@ shared_shptr<Type> makeShmem(std::size_t n) {
 
     return {reinterpret_cast<Type*>(ptr), destructor};
 }
-
-class SharedMemory {
-    public:
-        SharedMemory();
-        SharedMemory(void* ptr, std::size_t n_byte);
-        SharedMemory(const SharedMemory& shared_mem);
-        SharedMemory& operator=(const SharedMemory& shared_mem);
-        SharedMemory(SharedMemory&& shared_mem);
-        SharedMemory& operator=(SharedMemory&& shared_mem);
-        
-        bool operator==(SharedMemory& shared_map);
-        bool operator!=(SharedMemory& shared_map);
-
-        ~SharedMemory() = default;
-
-        std::size_t getSize() const;
-        std::size_t getFreeMemory() const;
-        
-        void* getStart();
-        void* getCurrent();
-        void* getEnd();
-        sem_t* getSemPtr();
-
-        void* takeMemory(std::size_t n_bytes);
-        void freeMemory(std::size_t n_bytes);
-
-    private:
-        void* getRawPtr() const; 
-
-        void*  ptr_;
-        std::size_t offset_;
-};
 
 }  // shm
 
