@@ -26,6 +26,10 @@ class Allocator {
 
     public:
 
+        Allocator()
+            : ptr_(nullptr)
+            , offset_(0) {}
+
         Allocator(const Allocator<value_type>& alloc)
             : ptr_(alloc.ptr_)
             , offset_(alloc.offset_) {}

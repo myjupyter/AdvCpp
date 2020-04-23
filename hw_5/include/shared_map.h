@@ -3,6 +3,7 @@
 
 #include <map>
 #include <utility>
+#include <type_traits>
 
 #include "allocator.h"
 #include "semaph.h"
@@ -17,13 +18,12 @@ static const std::size_t kBytes = kPages * ::sysconf(_SC_PAGE_SIZE);
 template <
     class Key,
     class T,
-    class Compare = std::less<Key>,
-    class Alloc = Allocator<std::pair<const Key, T> > 
+    class Compare = std::less<Key>
 > class Map : NonCopyable {
     public:        
-        using map_type        = std::map<Key, T, Compare, Alloc>;
         using value_type      = std::pair<const Key, T>;
         using allocator_type  = Allocator<value_type>; 
+        using map_type        = std::map<Key, T, Compare, allocator_type>;
         using size_type       = std::size_t;
 
     public:
@@ -73,41 +73,33 @@ template <
 
 
         // Elements access 
-        T& at(const Key& key) {
-            SemaphoreLock lock(semaph_);
-            return map_->at(key);
-        }
-
-        const T& at(const Key& key) const {
-            SemaphoreLock lock(semaph_);
-            return map_->at(key);
-        } 
-       
-        T& operator[](const Key& key) {
+        T operator[](const Key& key) {
             SemaphoreLock lock(semaph_);
             return map_->operator[](key);
         }
 
-        T& operator[](Key&& key) {
+        T operator[](Key&& key) {
             SemaphoreLock lock(semaph_);
             return map_->operator[](key);
         }
 
         //Modifiers
-        auto insert(const value_type& value) {
+        void set(const Key& key, T& value) {
             SemaphoreLock lock(semaph_);
-            return map_->insert(std::forward<value_type>(value));
+            map_->operator[](key) = value;
+        }
+        
+        auto insert(const value_type& value) {
+            return insert_(std::forward<value_type>(value));
         }
 
         template <typename P>
         auto insert(P&& value) {
-            SemaphoreLock lock(semaph_);
-            return map_->insert(std::forward<P>(value));
+            return insert_(std::forward<value_type>(value));
         }
         
         auto insert(value_type&& value) {
-            SemaphoreLock lock(semaph_);
-            return map_->insert(std::forward<value_type>(value));
+            return insert_(std::forward<value_type>(value));
         }
 
         void erase(map_type::iterator pos) {
@@ -126,6 +118,31 @@ template <
         }
 
     private:
+        inline auto insert_(const value_type& value) {
+            SemaphoreLock lock(semaph_);
+            if constexpr (std::is_pod<Key>::value &&
+                          std::is_pod<T>::value) {
+                return map_->insert(value);
+            } 
+            
+            auto alloc = get_allocator();
+            if constexpr (std::is_constructible<Key, const Key&, const Allocator<value_type>&>::value &&
+                          std::is_pod<T>::value) {
+                return map_->insert({Key{value.first, get_allocator()}, value.second});
+            }
+            if constexpr (std::is_pod<Key>::value &&
+                          std::is_constructible<T, const T&, const Allocator<value_type>&>::value) {
+                return map_->insert({value.first, T{value.second, get_allocator()}}); 
+            }
+            if constexpr (std::is_constructible<Key, const Key&, const Allocator<value_type>&>::value &&
+                          std::is_constructible<T,   const T&,   const Allocator<value_type>&>::value) {
+                return map_->insert({Key{value.first, alloc}, T{value.second, alloc}});
+            }
+            throw std::runtime_error(std::string(typeid(Key).name()) + " or " + \
+                    std::string(typeid(T).name()) + " have no allocator field");
+        }
+
+
         inter_proc_mem<value_type> memory_;
         
         map_type* map_;
