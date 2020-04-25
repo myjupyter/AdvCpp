@@ -4,8 +4,6 @@ namespace shm {
 
 // Semaphore
 
-//Semaphore::Semaphore() : {}
-    
 Semaphore::Semaphore(int init_value, bool shared) {
     if (-1 == ::sem_init(&sem_, static_cast<int>(shared), init_value)) {
         throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));

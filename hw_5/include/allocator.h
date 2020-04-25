@@ -20,32 +20,15 @@ class Allocator {
         using pointer    = Type*;
         using value_type = Type;
 
-        template <typename U>
-        struct rebind {
-            typedef Allocator<U> other;
-        };
-
     public:
-
         Allocator()
             : ptr_(nullptr)
             , offset_(0) {}
 
-        Allocator(const Allocator<value_type>& alloc)
-            : ptr_(alloc.ptr_)
-            , offset_(alloc.offset_) {}
-    
         template <typename U>
         Allocator(const Allocator<U>& alloc)
             : ptr_(alloc.ptr_)
             , offset_(alloc.offset_) {}
-
-        Allocator& operator=(const Allocator<value_type>& alloc) {
-            ptr_    = alloc.ptr_;
-            offset_ = alloc.offset_;
-            
-            return *this;
-        }
         
         template <typename U>
         Allocator& operator=(const Allocator<U>& alloc) {
@@ -54,7 +37,7 @@ class Allocator {
             
             return *this;
         }
-
+        
         Allocator(void* ptr, std::size_t n_byte) 
             : ptr_(ptr) {
             std::size_t* p = reinterpret_cast<std::size_t*>(ptr_);
@@ -131,7 +114,6 @@ class Allocator {
         void*  ptr_;
         std::size_t offset_;
 };
-
 
 template <class Type, class U>
 bool operator==(const Allocator<Type>& map_l, 
