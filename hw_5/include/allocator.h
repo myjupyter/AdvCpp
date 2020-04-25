@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "shared_memory.h"
+#include "semaph.h"
 
 namespace shm {
 
@@ -58,17 +59,14 @@ class Allocator {
             : ptr_(ptr) {
             std::size_t* p = reinterpret_cast<std::size_t*>(ptr_);
             // offset size 
-            offset_ = 2 * sizeof(std::size_t) + sizeof(sem_t);
+            offset_ = 2 * sizeof(std::size_t) + sizeof(Semaphore);
             // size of memory
             *p = n_byte - offset_;                
             // free memory size
             *(p + 1) = *p;
 
             // pointer to semaphore
-            auto* semaphore_ptr = reinterpret_cast<sem_t*>(p + 2);
-            if (-1 == ::sem_init(semaphore_ptr, 1, 1)) {
-                    throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));
-            }       
+            auto* semaphore_ptr = reinterpret_cast<Semaphore*>(p + 2);
         }
 
         ~Allocator() = default;
@@ -108,9 +106,8 @@ class Allocator {
             return getStart() + getSize();
         }
 
-        sem_t* getSemPtr() {
-            auto* ptr = reinterpret_cast<sem_t*>(reinterpret_cast<std::size_t*>(getRawPtr()) + 2);
-            return ptr;
+        Semaphore* getSemPtr() {
+            return reinterpret_cast<Semaphore*>(reinterpret_cast<std::size_t*>(getRawPtr()) + 2);
         }
 
         void* takeMemory(std::size_t n_bytes) {

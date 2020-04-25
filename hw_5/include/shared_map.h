@@ -12,6 +12,7 @@
 namespace shm {
 
 // configs
+static const int kThreads = 1;
 static const int kPages = 4;
 static const std::size_t kBytes = kPages * ::sysconf(_SC_PAGE_SIZE);
 
@@ -30,9 +31,7 @@ template <
         Map() : memory_(makeShmem<value_type>(kBytes)) {
             Allocator<value_type> alloc(reinterpret_cast<void*>(memory_.get()), kBytes);
                 
-            Semaphore sem(alloc.getSemPtr(), 1, true);    
-            semaph_ = std::move(sem);
-
+            semaph_ = new (alloc.getSemPtr()) Semaphore{kThreads, true};
             map_ = new (alloc.allocate(sizeof(map_type))) map_type{alloc};
         }
 
@@ -41,6 +40,7 @@ template <
             ,  map_(map.map_)
             ,  semaph_(std::move(map.semaph_)) {
             map.map_ = nullptr;
+            map.semaph_ = nullptr;
         }
 
         Map& operator=(Map&& map) {
@@ -50,6 +50,7 @@ template <
                 semaph_ = std::move(map.semaph_);
 
                 map.map_ = nullptr;
+                map.semaph_ = nullptr;
             }
             return *this;
         }
@@ -74,18 +75,18 @@ template <
 
         // Elements access 
         T operator[](const Key& key) {
-            SemaphoreLock lock(semaph_);
+            SemaphoreLock lock(*semaph_);
             return map_->operator[](key);
         }
 
         T operator[](Key&& key) {
-            SemaphoreLock lock(semaph_);
+            SemaphoreLock lock(*semaph_);
             return map_->operator[](key);
         }
 
         //Modifiers
         void set(const Key& key, T& value) {
-            SemaphoreLock lock(semaph_);
+            SemaphoreLock lock(*semaph_);
             map_->operator[](key) = value;
         }
         
@@ -103,23 +104,23 @@ template <
         }
 
         void erase(map_type::iterator pos) {
-            SemaphoreLock lock(semaph_);
+            SemaphoreLock lock(*semaph_);
             map_->erase(pos);
         }
         
         size_type erase(const Key& key) {
-            SemaphoreLock lock(semaph_);
+            SemaphoreLock lock(*semaph_);
             return map_->erase(key);
         }
 
         void clear() noexcept {
-            SemaphoreLock lock(semaph_);
+            SemaphoreLock lock(*semaph_);
             return map_->clear(); 
         }
 
     private:
         inline auto insert_(const value_type& value) {
-            SemaphoreLock lock(semaph_);
+            SemaphoreLock lock(*semaph_);
             if constexpr (std::is_pod<Key>::value &&
                           std::is_pod<T>::value) {
                 return map_->insert(value);
@@ -142,11 +143,10 @@ template <
                     std::string(typeid(T).name()) + " have no allocator field");
         }
 
-
         inter_proc_mem<value_type> memory_;
         
         map_type* map_;
-        Semaphore semaph_;
+        Semaphore* semaph_;
 };
 
 }  // namespace shm

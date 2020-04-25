@@ -2,14 +2,12 @@
 #define SHARED_MEMORY_H_
 
 #include <sys/mman.h>
-#include <semaphore.h>
 
 #include <cerrno>
 #include <memory>
 #include <functional>
 #include <stdexcept>
 #include <system_error>
-
 
 namespace shm {
 

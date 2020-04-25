@@ -11,8 +11,8 @@ namespace shm {
 
 class Semaphore : NonCopyable {
     public:
-        Semaphore();
-        Semaphore(sem_t* init_addres, int init_value = 1, bool shared = false);
+        Semaphore() = default;
+        Semaphore(int init_value = 1, bool shared = false);
         Semaphore(Semaphore&& sem);
         Semaphore& operator=(Semaphore&& sem);
         ~Semaphore();
@@ -22,7 +22,8 @@ class Semaphore : NonCopyable {
 
     private:
         friend class SemaphoreLock;
-        sem_t* sem_;
+
+        sem_t sem_;
 };
 
 
