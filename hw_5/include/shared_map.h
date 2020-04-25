@@ -13,7 +13,7 @@ namespace shm {
 
 // configs
 static const int kThreads = 1;
-static const int kPages = 4;
+static const int kPages = 60;
 static const std::size_t kBytes = kPages * ::sysconf(_SC_PAGE_SIZE);
 
 template <
