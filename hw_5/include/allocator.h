@@ -38,18 +38,9 @@ class Allocator {
             return *this;
         }
         
-        Allocator(void* ptr, std::size_t n_byte) 
+        Allocator(void* ptr) 
             : ptr_(ptr) {
-            std::size_t* p = reinterpret_cast<std::size_t*>(ptr_);
-            // offset size 
-            offset_ = 2 * sizeof(std::size_t) + sizeof(Semaphore);
-            // size of memory
-            *p = n_byte - offset_;                
-            // free memory size
-            *(p + 1) = *p;
-
-            // pointer to semaphore
-            auto* semaphore_ptr = reinterpret_cast<Semaphore*>(p + 2);
+            offset_ = sizeof(MemInfo);
         }
 
         ~Allocator() = default;
@@ -70,17 +61,24 @@ class Allocator {
             }
         }
 
+
+        // Special methods
         std::size_t getSize() const {
-            return *(reinterpret_cast<std::size_t*>(ptr_));
+            return getMemInfo()->size;
         }
         
         std::size_t getFreeMemory() const {
-            return *(reinterpret_cast<std::size_t*>(ptr_) + 1);
+            return getMemInfo()->free_memory;
+        }
+
+        pid_t getMasterPid() const {
+            return static_cast<pid_t>(getMemInfo()->master_pid);
         }
         
         void* getStart() {
             return getRawPtr() + offset_;
         }
+
         void* getCurrent() {
             return getStart() + (getSize() - getFreeMemory());
         }
@@ -90,7 +88,7 @@ class Allocator {
         }
 
         Semaphore* getSemPtr() {
-            return reinterpret_cast<Semaphore*>(reinterpret_cast<std::size_t*>(getRawPtr()) + 2);
+            return &(getMemInfo()->semaphore);
         }
 
         void* takeMemory(std::size_t n_bytes) {
@@ -98,15 +96,19 @@ class Allocator {
                 throw std::bad_alloc();
             }
             void* ptr = getStart() + (getSize() - getFreeMemory());
-            *(reinterpret_cast<std::size_t*>(ptr_) + 1) -= n_bytes; 
+            getMemInfo()->free_memory -= n_bytes; 
             return ptr;
         }
         
         void freeMemory(std::size_t n_bytes) {
-            *(reinterpret_cast<std::size_t*>(ptr_) + 1) += n_bytes;
+            getMemInfo()->free_memory += n_bytes;
         }
 
-    public:
+    public: 
+        MemInfo* getMemInfo() const {
+            return reinterpret_cast<MemInfo*>(ptr_);
+        }
+
         void* getRawPtr() const {
             return reinterpret_cast<void*>(ptr_);
         }

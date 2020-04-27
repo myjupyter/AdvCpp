@@ -17,7 +17,7 @@
 using namespace shm;
 using namespace std::chrono_literals;
 
-using String = std::basic_string<char, std::char_traits<char>, Allocator<char>>;
+using String = std::basic_string<char, std::char_traits<char>, Allocator<char>>;;
 
 const int FIRST = 100;
 const int SECOND = 200;
@@ -44,7 +44,6 @@ int main() {
 
     int p;
     wait(&p);
-
 
     std::for_each(map.begin(), map.end(), [](auto& x){
         if (x.second == "first") {

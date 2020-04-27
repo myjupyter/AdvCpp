@@ -29,9 +29,9 @@ template <
 
     public:
         Map() : memory_(makeShmem<value_type>(kBytes)) {
-            Allocator<value_type> alloc(reinterpret_cast<void*>(memory_.get()), kBytes);
+            Allocator<value_type> alloc(reinterpret_cast<void*>(memory_.get()));
                 
-            semaph_ = new (alloc.getSemPtr()) Semaphore{kThreads, true};
+            semaph_ = alloc.getSemPtr();
             map_ = new (alloc.allocate(sizeof(map_type))) map_type{alloc};
         }
 
@@ -56,7 +56,10 @@ template <
         }
         
         ~Map() {
-            map_->~map(); 
+            std::cout << "Call Destr" << getpid() << std::endl;
+            if (get_allocator().getMasterPid() == getpid()) {
+                map_->~map(); 
+            }
         }
 
         

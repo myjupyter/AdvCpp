@@ -2,6 +2,7 @@
 #define SHARED_MEMORY_H_
 
 #include <sys/mman.h>
+#include <unistd.h>
 
 #include <cerrno>
 #include <memory>
@@ -9,10 +10,28 @@
 #include <stdexcept>
 #include <system_error>
 
+#include <semaph.h>
+
 namespace shm {
 
 template <typename Type>
 using inter_proc_mem = std::unique_ptr<Type, std::function<void(Type*)>>;
+
+struct MemInfo {
+    std::size_t master_pid;
+    std::size_t size;
+    std::size_t free_memory;
+    Semaphore semaphore;
+
+    MemInfo() = delete;
+    MemInfo(std::size_t memory_size, pid_t pid = getpid()) 
+        : master_pid(static_cast<std::size_t>(pid)) 
+        , size(memory_size - sizeof(MemInfo))
+        , free_memory(size)
+        , semaphore{1, true} {}
+
+    ~MemInfo() = default;
+};
 
 template <typename Type>
 inter_proc_mem<Type> makeShmem(std::size_t n) {
@@ -24,8 +43,11 @@ inter_proc_mem<Type> makeShmem(std::size_t n) {
         throw std::bad_alloc();
     }
     auto destructor = [n](Type* ptr_) { 
+        reinterpret_cast<MemInfo*>(ptr_)->~MemInfo();
         ::munmap(ptr_,  n * sizeof(Type));
     };
+
+    ptr = new (ptr) MemInfo{n * sizeof(Type), getpid()};
 
     return {reinterpret_cast<Type*>(ptr), destructor};
 }

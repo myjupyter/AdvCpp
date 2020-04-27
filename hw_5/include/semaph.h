@@ -4,7 +4,6 @@
 #include <semaphore.h>
 #include <cerrno>
 #include <system_error>
-#include <atomic>
 
 #include "non_copyable.h"
 
@@ -18,16 +17,12 @@ class Semaphore : NonCopyable {
         Semaphore& operator=(Semaphore&& sem) = delete;
         ~Semaphore();
         
-        void lock();
-        void unlock();
-
-    private:
         void wait();
         void release();
-        
+    
+    public: 
         friend class SemaphoreLock;
 
-        std::atomic<bool> flag_;
         sem_t sem_;
 };
 

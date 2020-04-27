@@ -4,8 +4,7 @@ namespace shm {
 
 // Semaphore
 
-Semaphore::Semaphore(int init_value, bool shared) 
-    : flag_{false} {
+Semaphore::Semaphore(int init_value, bool shared) {
     if (-1 == ::sem_init(&sem_, static_cast<int>(shared), init_value)) {
         throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));
     }
@@ -25,18 +24,6 @@ void Semaphore::release() {
     }
 }
 
-void Semaphore::lock() {
-    while (flag_.exchange(true, std::memory_order_relaxed));
-    std::atomic_thread_fence(std::memory_order_acquire);
-    wait();
-}
-
-void Semaphore::unlock() {
-    release();
-    std::atomic_thread_fence(std::memory_order_release);
-    flag_.store(false, std::memory_order_relaxed);
-}
-
 Semaphore::~Semaphore() {
     ::sem_destroy(&sem_);
 }
@@ -45,11 +32,11 @@ Semaphore::~Semaphore() {
 
 SemaphoreLock::SemaphoreLock(Semaphore& sem) 
     : sem_(sem) {
-    sem_.lock();
+    sem_.wait();
 }
 
 SemaphoreLock::~SemaphoreLock() {
-    sem_.unlock();
+    sem_.release();
 }
 
 }  // namesapce shm
