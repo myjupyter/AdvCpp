@@ -16,21 +16,35 @@ static const int kThreads = 1;
 static const int kPages = 60;
 static const std::size_t kBytes = kPages * ::sysconf(_SC_PAGE_SIZE);
 
+
+using shared_string = std::basic_string<char, std::char_traits<char>, Allocator<char>>;
+
+template <typename T>
+struct rebind {
+    using type = std::conditional<std::is_pod<T>::value, T, shared_string>::type;
+};
+
 template <
     class Key,
     class T,
-    class Compare = std::less<Key>
+    class Compare = std::less<typename rebind<Key>::type>
 > class Map : NonCopyable {
-    public:        
-        using value_type      = std::pair<const Key, T>;
-        using allocator_type  = Allocator<value_type>; 
-        using map_type        = std::map<Key, T, Compare, allocator_type>;
-        using size_type       = std::size_t;
+    public:
+        using false_value_type = std::pair<const Key, T>;
+        
+        using value_type       = std::pair<const typename rebind<Key>::type, typename rebind<T>::type>; 
+        using allocator_type   = Allocator<value_type>;
+        
+        using rebind_key       = rebind<Key>::type;
+        using rebind_t         = rebind<T>::type;
+
+        using map_type         = std::map<typename rebind<Key>::type, typename rebind<T>::type, Compare, allocator_type>;
+        using size_type        = std::size_t;
 
     public:
-        Map() : memory_(makeShmem<value_type>(kBytes)) {
-            Allocator<value_type> alloc(reinterpret_cast<void*>(memory_.get()));
-                
+        Map() 
+            : memory_(makeShmem<value_type>(kBytes))
+            , alloc(reinterpret_cast<void*>(memory_.get())) {
             semaph_ = alloc.getSemPtr();
             map_ = new (alloc.allocate(sizeof(map_type))) map_type{alloc};
         }
@@ -56,15 +70,14 @@ template <
         }
         
         ~Map() {
-            std::cout << "Call Destr" << getpid() << std::endl;
-            if (get_allocator().getMasterPid() == getpid()) {
+            if (alloc.getMasterPid() == getpid()) {
                 map_->~map(); 
             }
         }
 
         
         allocator_type get_allocator() const {
-            return map_->get_allocator();
+            return alloc;
         }
 
         //Iterators
@@ -79,31 +92,41 @@ template <
         // Elements access 
         T operator[](const Key& key) {
             SemaphoreLock lock(*semaph_);
-            return map_->operator[](key);
+            if constexpr (std::is_pod<Key>::value) {
+                return map_->operator[](key);
+            }
+            return T(map_->operator[](std::move(rebind_key{key, alloc})));
         }
 
         T operator[](Key&& key) {
             SemaphoreLock lock(*semaph_);
-            return map_->operator[](key);
+            if constexpr (std::is_pod<Key>::value) {
+                return map_->operator[](key);
+            }
+            return T(map_->operator[](std::move(rebind_key{key, alloc})));
         }
 
-        //Modifiers
-        void set(const Key& key, T& value) {
-            SemaphoreLock lock(*semaph_);
-            map_->operator[](key) = value;
-        }
-        
-        auto insert(const value_type& value) {
-            return insert_(std::forward<value_type>(value));
+        //Modifiers 
+        void insert(const false_value_type& value) {
+            insert_(std::forward<false_value_type>(value));
         }
 
         template <typename P>
-        auto insert(P&& value) {
-            return insert_(std::forward<value_type>(value));
+        void insert(P&& value) {
+            insert_(std::forward<false_value_type>(value));
         }
         
-        auto insert(value_type&& value) {
-            return insert_(std::forward<value_type>(value));
+        void insert(false_value_type&& value) {
+            insert_(std::forward<false_value_type>(value));
+        }
+
+
+        void set(const Key& key, T& value) {
+            set_(value_type{key, value}); 
+        }
+
+        void set(const false_value_type& value) {
+            set_(value);
         }
 
         void erase(map_type::iterator pos) {
@@ -113,7 +136,10 @@ template <
         
         size_type erase(const Key& key) {
             SemaphoreLock lock(*semaph_);
-            return map_->erase(key);
+            if constexpr (std::is_pod<Key>::value) {
+                return map_->erase(key);
+            }
+            return map_->erase(rebind_key{key, alloc});
         }
 
         void clear() noexcept {
@@ -121,33 +147,53 @@ template <
             return map_->clear(); 
         }
 
+
     private:
-        inline auto insert_(const value_type& value) {
+        auto doSomething(const false_value_type& value,
+                     std::function<void(const false_value_type&)> case_1,
+                     std::function<void(const false_value_type&)> case_2,
+                     std::function<void(const false_value_type&)> case_3,
+                     std::function<void(const false_value_type&)> case_4) {
             SemaphoreLock lock(*semaph_);
-            if constexpr (std::is_pod<Key>::value &&
-                          std::is_pod<T>::value) {
-                return map_->insert(value);
+            if constexpr (std::is_pod<rebind_key>::value &&
+                          std::is_pod<rebind_t>::value) {
+                return case_1(value);
             } 
-            
-            auto alloc = get_allocator();
-            if constexpr (std::is_constructible<Key, const Key&, const Allocator<value_type>&>::value &&
+            if constexpr (std::is_same<Key, std::string>::value &&
                           std::is_pod<T>::value) {
-                return map_->insert({Key{value.first, get_allocator()}, value.second});
+                return case_2(value);            
             }
             if constexpr (std::is_pod<Key>::value &&
-                          std::is_constructible<T, const T&, const Allocator<value_type>&>::value) {
-                return map_->insert({value.first, T{value.second, get_allocator()}}); 
+                          std::is_same<T, std::string>::value) {
+                return case_3(value); 
             }
-            if constexpr (std::is_constructible<Key, const Key&, const Allocator<value_type>&>::value &&
-                          std::is_constructible<T,   const T&,   const Allocator<value_type>&>::value) {
-                return map_->insert({Key{value.first, alloc}, T{value.second, alloc}});
+            if constexpr (std::is_same<Key, std::string>::value &&
+                          std::is_same<T,   std::string>::value) {
+                return case_4(value);
             }
+
             throw std::runtime_error(std::string(typeid(Key).name()) + " or " + \
-                    std::string(typeid(T).name()) + " have no allocator field");
+                    std::string(typeid(T).name()) + " should be POD type or std::string");
         }
 
-        inter_proc_mem<value_type> memory_;
+        void set_(const false_value_type& value) {
+            doSomething(value,
+                    [this] (const false_value_type& value) { this->map_->operator[](rebind_key{value.first})              = value.second;},
+                    [this] (const false_value_type& value) { this->map_->operator[](rebind_key{value.first, this->alloc}) = value.second;},
+                    [this] (const false_value_type& value) { this->map_->operator[](rebind_key{value.first})              = rebind_t{value.second, this->alloc};},
+                    [this] (const false_value_type& value) { this->map_->operator[](rebind_key{value.first, this->alloc}) = rebind_t{value.second, this->alloc};});
+        }
         
+        auto insert_(const false_value_type& value) {
+            doSomething(value,    
+                    [this] (const false_value_type& value) { this->map_->insert(value_type{value.first, value.second});},
+                    [this] (const false_value_type& value) { this->map_->insert(value_type{rebind_key{value.first, this->alloc}, value.second});},            
+                    [this] (const false_value_type& value) { this->map_->insert(value_type{value.first, rebind_t{value.second, this->alloc}});}, 
+                    [this] (const false_value_type& value) { this->map_->insert(value_type{rebind_key{value.first, this->alloc}, rebind_t{value.second, this->alloc}});});
+        }
+        
+        inter_proc_mem<value_type> memory_;
+        allocator_type alloc; 
         map_type* map_;
         Semaphore* semaph_;
 };

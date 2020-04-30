@@ -60,8 +60,16 @@ class Allocator {
                 freeMemory(n * sizeof(value_type));
             }
         }
+        
+        pid_t getMasterPid() const {
+            return static_cast<pid_t>(getMemInfo()->master_pid);
+        }
 
+        Semaphore* getSemPtr() {
+            return &(getMemInfo()->semaphore);
+        }
 
+    private:
         // Special methods
         std::size_t getSize() const {
             return getMemInfo()->size;
@@ -70,11 +78,7 @@ class Allocator {
         std::size_t getFreeMemory() const {
             return getMemInfo()->free_memory;
         }
-
-        pid_t getMasterPid() const {
-            return static_cast<pid_t>(getMemInfo()->master_pid);
-        }
-        
+                
         void* getStart() {
             return getRawPtr() + offset_;
         }
@@ -87,11 +91,7 @@ class Allocator {
             return getStart() + getSize();
         }
 
-        Semaphore* getSemPtr() {
-            return &(getMemInfo()->semaphore);
-        }
-
-        void* takeMemory(std::size_t n_bytes) {
+         void* takeMemory(std::size_t n_bytes) {
             if (getFreeMemory() < n_bytes) {
                 throw std::bad_alloc();
             }
@@ -104,7 +104,7 @@ class Allocator {
             getMemInfo()->free_memory += n_bytes;
         }
 
-    public: 
+     public: 
         MemInfo* getMemInfo() const {
             return reinterpret_cast<MemInfo*>(ptr_);
         }

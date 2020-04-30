@@ -43,7 +43,10 @@ inter_proc_mem<Type> makeShmem(std::size_t n) {
         throw std::bad_alloc();
     }
     auto destructor = [n](Type* ptr_) { 
-        reinterpret_cast<MemInfo*>(ptr_)->~MemInfo();
+        auto ptr = reinterpret_cast<MemInfo*>(ptr_);
+        if (ptr->master_pid == getpid()) {
+            ptr->~MemInfo();
+        }
         ::munmap(ptr_,  n * sizeof(Type));
     };
 

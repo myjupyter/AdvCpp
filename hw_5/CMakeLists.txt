@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.17)
 project(prog)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG}  -DDEBUG -g3 -Wpointer-arith")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -o3")
+set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG}   -fconcepts -DDEBUG -g3 -Wpointer-arith")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fconcepts -o3")
 
 set(PRJ_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(INC_DIR ${PRJ_DIR}/include)

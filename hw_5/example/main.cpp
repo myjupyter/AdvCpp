@@ -5,6 +5,8 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <type_traits>
+#include <typeinfo>
 
 #include <chrono>
 #include <thread>
@@ -17,26 +19,24 @@
 using namespace shm;
 using namespace std::chrono_literals;
 
-using String = std::basic_string<char, std::char_traits<char>, Allocator<char>>;;
-
 const int FIRST = 100;
 const int SECOND = 200;
 
 int main() {
-    Map<String, String> map; 
-
+    Map<std::string, std::string> map;
+    
     pid_t pid = fork();
     if (pid != 0) {
         for (int i = 0; i < FIRST; i++) {
             std::this_thread::sleep_for(1ms);
             std::cout << i << " ";
-            map.insert({String(std::to_string(i)), String("first")});
+            map.insert({std::to_string(i), "first"});
         }
     } else {
         for (int i = FIRST; i < SECOND; i++) {
             std::this_thread::sleep_for(1ms);
             std::cout << i << " ";
-            map.insert({String(std::to_string(i)), String("second")});
+            map.set({std::to_string(i), "second"});
         }
 
         return 0;
@@ -56,6 +56,6 @@ int main() {
             std::cout << x.first << " : " << x.second << " | ";     
         }
     });
-
+    
     return 0;
 }
