@@ -8,7 +8,10 @@ namespace Network::Http {
 class HttpParser {
     HttpParser();
     HttpParser(const std::string& packet);    
+ 
     ~HttpParser() = default;
+
+
 };
 
 } // namespace Network::Http

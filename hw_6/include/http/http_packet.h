@@ -18,6 +18,7 @@ class HttpPacket {
     
     public:
         HttpPacket() = default;
+        HttpPacket(const std::string& packet);
         HttpPacket(const HttpPacket& packet) = default;
         HttpPacket(HttpPacket&& packet) = default;
         HttpPacket& operator=(const HttpPacket& packet) = default;
@@ -59,7 +60,7 @@ class HttpPacket {
         std::optional<std::string> uri_;
         std::optional<double>      version_; 
         
-        Headers headers_;
+        Headers     headers_;
         std::string body_;
 };
 

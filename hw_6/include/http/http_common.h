@@ -4,8 +4,16 @@
 #include <string>
 #include <string_view>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace Network::Http {
+
+static std::unordered_map<double, std::string> HttpVersion = {
+    {0.9, "0.9"},
+    {1.0, "1.0"},
+    {1.1, "1.1"},
+    {2.0, "2.0"}
+};
 
 namespace Method {
     constexpr std::string_view GET     = "GET";
@@ -78,7 +86,7 @@ enum class Code {
     UNAVAILABLE_FOR_LEGAL_REASONS      = 451,
     CLIENT_CLOSED_REQUEST              = 499,
    
-    //ServierError
+    //ServerError
     INTERNAL_SERVER_ERROR              = 500,
     NOT_IMPLEMENTED                    = 501,
     BAD_GATEWAY                        = 502, 
@@ -91,6 +99,23 @@ enum class Code {
     NOT_EXTENDED                       = 510,
     NETWORK_AUTHENTICATION_REQUIRED    = 511,
     NETWORK_CONNECT_TIMEOUT_ERROR      = 599,
+};
+
+static std::unordered_map<Code, std::string> CodeMessage = {
+    // Informational
+    {Code::CONTINUE, "Continue"},
+    {Code::SWITCHING_PROTOCOL, "Switching Protocol"},
+    {Code::PROCESSING, "Processing"},
+
+    // Success
+    {Code::OK, "OK"},
+
+    // Client Error
+    {Code::BAD_REQUEST, "Bad Request"},
+    {Code::NOT_FOUND, "Not Found"},
+
+    // ServerError
+    {Code::INTERNAL_SERVER_ERROR, "Internal Server Error"},
 };
 
 namespace Headers {

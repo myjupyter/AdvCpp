@@ -11,16 +11,22 @@ void func(Client& client_and_data) {
 
     auto& [client, package] = client_and_data;
 
-    client >> package;
-
     std::string buffer;
-    while (package.getline(buffer, "\r\n\r\n")) {
-        std::clog << buffer << std::endl;
-    }
-    std::clog << "BODY" << std::endl;
-    package >> buffer;
-    std::clog << buffer << std::endl;
-    //client << buffer;        
+    client >> buffer;
+
+    std::cout << buffer << std::endl;    
+    Http::HttpPacket request(buffer); 
+
+    std::cout << request.toRequest() << std::endl << std::endl;
+
+    Http::HttpPacket packet;
+    packet.setVersion(1.1);
+    packet.setCode(Http::Code::OK);
+    packet.addHeader({"Server", "my_server v0.1"});
+    packet.addHeader({"Connection", "close"});
+
+    std::string f = packet.toResponse();
+    client << f;        
 }
 
 int main() {

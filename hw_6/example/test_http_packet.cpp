@@ -1,6 +1,9 @@
 #include <iostream>
+#include <iterator>
+#include <sstream>
 
 #include <http_packet.h>
+
 
 using namespace Network::Http;
 
@@ -15,13 +18,16 @@ int main() {
     packet.addHeader({"Last-Modified",  "Sun, 26 Sep 2010 22:04:35 GMT"});
     packet.addHeader({"ETag",           "\"45b6-834-49130cc1182c0\""});
     packet.addHeader({"Accept-Ranges",  "bytes"});
-    packet.addHeader({"Content-Length", "12"});
     packet.addHeader({"Connection",     "close"});
     packet.addHeader({"Content-Type",   "text/html"});
 
     packet.setBody("Hello world!");
 
-    std::cout << packet.toResponse() << std::endl;
+    std::cout << packet.toResponse();
+
+    HttpPacket new_packet(packet.toResponse());
+
+    std::cout << new_packet.toResponse() << std::endl;
 
     return 0;
 } 

@@ -70,7 +70,6 @@ ClientTcp& ClientTcp::operator>>(std::string& package) {
     std::string buffer(BUFFER_SIZE, '\0');
     if (connection_.read(buffer.data(), buffer.size() - 1)) {
         std::copy(buffer.begin(), buffer.end(), std::back_inserter(package));
-        buffer.clear();
     }
     return *this;
 }
@@ -79,7 +78,6 @@ ClientTcp& ClientTcp::operator>>(BytePackage& package) {
     std::string buffer(BUFFER_SIZE, '\0');
     if (connection_.read(buffer.data(), buffer.size() - 1)) {
         package << buffer;
-        buffer.clear();
     }
     return *this;
 }
