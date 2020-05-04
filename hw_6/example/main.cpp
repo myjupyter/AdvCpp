@@ -14,19 +14,16 @@ void func(Client& client_and_data) {
     std::string buffer;
     client >> buffer;
 
-    std::cout << buffer << std::endl;    
     Http::HttpPacket request(buffer); 
+    std::cout << request.toString() << std::endl << std::endl;
 
-    std::cout << request.toRequest() << std::endl << std::endl;
+    Http::HttpHeader head;
+    head.makeResponse("1.1", Http::Code::OK);
+    head["Server"]     =  "my_server v0.1";
+    head["Connection"] =  "close";
 
-    Http::HttpPacket packet;
-    packet.setVersion(1.1);
-    packet.setCode(Http::Code::OK);
-    packet.addHeader({"Server", "my_server v0.1"});
-    packet.addHeader({"Connection", "close"});
-
-    std::string f = packet.toResponse();
-    client << f;        
+    std::string res = std::move(head.toString());
+    client << res;        
 }
 
 int main() {

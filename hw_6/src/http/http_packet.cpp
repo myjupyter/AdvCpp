@@ -5,90 +5,130 @@
 #include <iterator>
 #include <regex>
 #include <iostream>
+#include <cstring>
 
-std::string HEADER_END = "\n\r";
-std::string EMPTY_STRING = "";
-    
-const std::string_view header_del(":");
-const std::regex regex_code("\\d{3}");
-const std::regex regex_method("(GET|POST|PUT|DELETE|HEAD|CONNECT|OPTIONS|PATCH)");
+std::string HEADER_END = "\r\n";
+std::string EMPTY_STRING = "\r\n\r\n";
 
-const std::regex regex_http("HTTP/\\d.\\d");
-const std::regex regex_http_version("\\d\.\\d");
+const std::regex correct_request("(GET|POST|PUT|DELETE|HEAD|CONNECT|OPTIONS|PATCH)( )+(/|\\w)+( )+HTTP/\\d\\.\\d");
+const std::regex correct_response("HTTP/\\d.\\d( )+\\d{3}( )?( |\\w?)+");
 
 namespace Network::Http {
 
-HttpPacket::HttpPacket(const std::string& packet) {
-    if (packet.empty()) {
-        std::invalid_argument("Wrong");
+// HttpHeader
+HttpHeader::HttpHeader(const std::string& head) {
+    if (head.empty()) {
+        throw std::invalid_argument("");
     }
-    std::stringstream input(packet);
     
-    std::string first_line;
-    std::getline(input, first_line);
+    std::stringstream input(head);
 
-    std::stringstream stream_line(first_line);
-    std::istream_iterator<std::string> iter(stream_line);
+    std::string r_line;
+    std::getline(input, r_line);
 
-    if (std::regex_search(first_line, regex_method)) {
-        method_ = *(iter++);
-        uri_    = *(iter++);
-
-        std::string http_ver = *iter;
-        auto slash = http_ver.find("/");
-        version_ = std::stof(std::string(http_ver.begin() + slash + 1, http_ver.end()));
-    } else {
-        std::string http_ver = *iter;
-        auto slash = http_ver.find("/");
-        version_ = std::stof(std::string(http_ver.begin() + slash + 1, http_ver.end()));
-
-        code_ = static_cast<Code>(std::stoi(*(++iter)));
+    for (auto ch: HEADER_END) {
+        r_line.erase(std::remove(r_line.begin(), r_line.end(), ch), r_line.end());
     }
 
-    for (std::string line; std::getline(input, line);) {
-        for (auto c: HEADER_END) {
-            line.erase(std::remove(line.begin(), line.end(), c), line.end());
+    std::stringstream s_r_line(r_line);
+    std::istream_iterator<std::string> start(s_r_line);
+    std::istream_iterator<std::string> end;
+
+    if (std::regex_search(r_line, correct_request)) {
+        response_line_ = std::nullopt;
+        
+        std::string method = *start++;
+        std::string uri    = *start++;
+        version_ = std::move(std::string(start->begin() + start->find("/") + 1, start->end()));
+        request_line_ = std::make_tuple(method, uri);
+    } else if (std::regex_search(r_line, correct_response)) {
+        request_line_ = std::nullopt;
+
+        version_ = std::move(std::string(start->begin() + start->find("/") + 1, start->end()));
+        response_line_ = static_cast<Code>(std::stoi(*(++start)));
+    } else {
+        throw std::invalid_argument("Invalid first line");
+    }
+
+    while (std::getline(input, r_line)) {
+        for (auto ch: HEADER_END) {
+            r_line.erase(std::remove(r_line.begin(), r_line.end(), ch), r_line.end());
         }
-        if (line == "") {
+        if (!std::strlen(r_line.c_str())) {
             break;
         }
-        auto it = line.find(":");
-        auto start = line.begin();
-        addHeader({std::string(start, start + it),
-                   std::string(start + it + 1, line.end())});
+        auto pos = r_line.find(":");
+        auto begin = r_line.begin();
+        headers_.insert({std::string(begin, begin + pos), 
+                         std::string(begin + pos + 1, r_line.end())});
+
     }
-    body_ = std::move(std::string(std::istreambuf_iterator<char>(input), {}));
 }
 
-HttpPacket::Headers::iterator HttpPacket::begin() {
-    return headers_.begin();
+std::string HttpHeader::toString() {
+    std::string http_head("");
+    try {
+        if (response_line_.has_value()) {
+            auto& code = response_line_.value();
+            http_head = "HTTP/" + version_ + " " + std::to_string(static_cast<int>(code)) + \
+                         " " + CodeMessage[code]; 
+        } else if (request_line_.has_value()) {
+            auto& [method, uri] = request_line_.value();
+            http_head = method + " " + uri + " " + "HTTP/" + version_;
+        } else {
+            throw std::bad_optional_access();
+        }
+    } catch (std::bad_optional_access& err) {
+        throw std::runtime_error("Hello there");
+    }
+    http_head += HEADER_END;
+
+    std::for_each(headers_.begin(), headers_.end(), [&http_head](auto& field) {
+        http_head += field.first + ": " + field.second + HEADER_END;        
+    });
+
+    return http_head;
 }
 
-HttpPacket::Headers::iterator HttpPacket::end() {
-    return headers_.end();
+void HttpHeader::makeRequest(const std::string& method,
+                             const std::string& uri,
+                             const std::string& version) {
+    response_line_ = std::nullopt;
+
+    version_ = version;
+    request_line_  = std::make_tuple(method, uri); 
 }
-        
-void HttpPacket::addHeader(const Header& header) {
+
+void HttpHeader::makeResponse(const std::string& version, Code code) {
+    request_line_ = std::nullopt;
+
+    version_ = version;
+    response_line_ = code;
+}
+
+void HttpHeader::insert(const Field& header) {
     headers_.insert(header);
 }
 
-std::optional<std::string> HttpPacket::getHeader(const std::string& header) {
-    auto it = headers_.find(header);
-    if (it != headers_.end()) {
-        return it->second;
-    }
-    return {};
+std::string& HttpHeader::operator[](const std::string& field_name) {
+    return headers_[field_name];
 }
 
-/*
-std::string HttpPacket::operator[](const std::string& header) {
-    return headers_[header];
+void HttpHeader::erase(const std::string& field_name) {
+    headers_.erase(field_name);
+}
+
+
+// HttpPacket
+HttpPacket::HttpPacket(const std::string& packet)
+    : HttpHeader(packet)
+    , body_("") {
+    auto pos = packet.find(EMPTY_STRING);
+    if (pos != std::string::npos) {
+        body_ = std::move(std::string(packet.begin() + pos, packet.end()));
+    }
 }
         
-std::string& HttpPacket::operator[](const std::string& header) {
-    return headers_[header];
-}*/
-
 void HttpPacket::setBody(std::string&& body) {
     body_ = std::move(body);
 }
@@ -101,72 +141,12 @@ std::string& HttpPacket::getBody() {
     return body_;
 }
 
-void HttpPacket::setMethod(std::string method) {
-    method_ = method;    
-}
-
-std::optional<std::string> HttpPacket::getMethod() const {
-    return method_;
-}
-
-void HttpPacket::setCode(Code code) {
-    code_ = code;
-}
-
-std::optional<Code> HttpPacket::getCode() const {
-    return code_;
-}
-
-std::string HttpPacket::toRequest() {   
-    std::string http_packet("");
-    try {
-        http_packet = method_.value() + " " + uri_.value() + " " + "HTTP/" + std::to_string(version_.value());
-        http_packet += HEADER_END;
-    } catch (std::bad_optional_access& err) {
-        throw std::runtime_error("Bad formed request packet: method or uri or HTTP version are absent!");
-    }
-
-    if (method_.value() != Method::HEAD) {
-        headers_["Content-Length"] = std::to_string(body_.size());
-    }    
-   
-    std::for_each(headers_.begin(), headers_.end(), [&http_packet](auto& header){
-            http_packet += header.first + ": " + header.second + HEADER_END;        
-    });
-
-    http_packet += EMPTY_STRING + HEADER_END;
-
-    if (method_.value() != Method::HEAD) {
-        http_packet += body_;
-    }
-    return http_packet;
-}
-
-std::string HttpPacket::toResponse() {
-    std::string http_packet("");
-    try {
-        http_packet = "HTTP/" + HttpVersion[version_.value()] + " " + \
-                       std::to_string(static_cast<int>(code_.value())) + " " + \
-                       CodeMessage[code_.value()];
-        http_packet += HEADER_END;
-    } catch (std::bad_optional_access& err) {
-        throw std::runtime_error("Bad formed response packet: response code or HTTP version are absent!");
-    }
-   
-    if (!body_.empty()) { 
-        headers_["Content-Length"] = std::to_string(body_.size());
-    }
-
-    std::for_each(headers_.begin(), headers_.end(), [&http_packet](auto& header){
-        http_packet += header.first + ": " + header.second + HEADER_END; 
-    });
-
-    http_packet += EMPTY_STRING + HEADER_END;
-
+std::string HttpPacket::toString() {
     if (body_.empty()) {
-        return http_packet;
+        return HttpHeader::toString();
     }
-    return http_packet + body_;
+    return HttpHeader::toString() + HEADER_END + body_;
 }
+
 
 }; // namespace Network::Http

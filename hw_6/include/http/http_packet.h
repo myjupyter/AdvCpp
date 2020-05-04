@@ -5,62 +5,66 @@
 #include <string>
 #include <string_view>
 #include <optional>
+#include <tuple>
 #include <unordered_map>
 
 #include "http_common.h"
 
 namespace Network::Http {
 
-class HttpPacket {
+class HttpHeader {
     public:
-        using Header  = std::pair<std::string, std::string>;
-        using Headers = std::unordered_map<std::string, std::string>;
+        using Field        = std::pair<std::string, std::string>;
+        using Fields       = std::unordered_map<std::string, std::string>;
+        using RequestLine  = std::optional<std::tuple<std::string, std::string>>;
+        using ResponseLine = std::optional<Code>;
     
     public:
+        HttpHeader() = default;
+        HttpHeader(const HttpHeader& head) = default;
+        HttpHeader(HttpHeader&& head) = default;
+        HttpHeader& operator=(const HttpHeader& head) = default;
+        HttpHeader& operator=(HttpHeader&& head) = default;
+        ~HttpHeader() = default;
+
+        HttpHeader(const std::string& head);
+
+        virtual std::string toString();
+        void makeRequest(const std::string& method,
+                         const std::string& uri,
+                         const std::string& version);
+        void makeResponse(const std::string& version, Code code);
+        void insert(const Field& header);        
+        std::string& operator[](const std::string& field_name);
+        void erase(const std::string& field_name);
+
+    private:
+        RequestLine  request_line_;
+        ResponseLine response_line_;
+
+        std::string version_;
+
+        Fields headers_;
+};
+
+class HttpPacket : public HttpHeader {
+    public:
         HttpPacket() = default;
-        HttpPacket(const std::string& packet);
         HttpPacket(const HttpPacket& packet) = default;
         HttpPacket(HttpPacket&& packet) = default;
         HttpPacket& operator=(const HttpPacket& packet) = default;
         HttpPacket& operator=(HttpPacket&& packet) = default;
         ~HttpPacket() = default;
 
-        Headers::iterator begin();
-        Headers::iterator end();
+        HttpPacket(const std::string& packet);
 
-        void addHeader(const Header& header);
-        std::optional<std::string> getHeader(const std::string& header);
-        //std::string operator[](const std::string& header);
-        //std::string& operator[](const std::string& header);
+        std::string toString() override;
 
         void setBody(std::string&& body);
         void setBody(const std::string& body);
         std::string& getBody();
 
-        void setMethod(std::string method);
-        std::optional<std::string> getMethod() const;
-
-        void setCode(Code code);
-        std::optional<Code> getCode() const;
-
-        void setVersion(double ver) {
-            version_ = ver;
-        }
-
-        std::optional<double> getVersion() const {
-            return version_;
-        }
-
-        std::string toRequest();
-        std::string toResponse();
-
     private:
-        std::optional<std::string> method_;
-        std::optional<Code>        code_;
-        std::optional<std::string> uri_;
-        std::optional<double>      version_; 
-        
-        Headers     headers_;
         std::string body_;
 };
 

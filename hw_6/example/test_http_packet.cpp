@@ -2,14 +2,14 @@
 #include <iterator>
 #include <sstream>
 
-#include <http_packet.h>
+#include "http_packet.h"
 
 
 using namespace Network::Http;
 
 int main() {
 
-    HttpPacket packet;
+/*    HttpPacket packet;
     packet.setVersion(1.1);
     packet.setCode(Code::OK);
 
@@ -28,6 +28,20 @@ int main() {
     HttpPacket new_packet(packet.toResponse());
 
     std::cout << new_packet.toResponse() << std::endl;
+*/
+
+    HttpHeader head;
+    head.makeRequest(std::string(Method::GET), "/d/d/d", "1.1");
+    head["Date"] = "Sun, 10 Oct 2010 23:26:07 GMT";
+
+    std::cout << head.toString();
+
+    head.makeResponse("1.1", Code::OK);
+    HttpPacket packet(head.toString());
+
+    std::cout << packet.toString();
+
+
 
     return 0;
 } 
