@@ -1,16 +1,17 @@
 #include <iostream>
 #include <cstring>
+#include <thread>
 
-#include "service.h"
+#include "http_server.h"
 #include "http_packet.h"
 
 using namespace Network;
 using namespace Network::Services;
 
 void func(Client& client_and_data) {
-
     auto& [client, package] = client_and_data;
 
+/*
     std::string buffer;
     client >> buffer;
 
@@ -24,14 +25,24 @@ void func(Client& client_and_data) {
 
     std::string res = std::move(head.toString());
     client << res;        
+*/
+
+    std::string buffer;    
+
+    client >> buffer;
+    client << buffer;
 }
 
 int main() {
     try {
-        Service service(IpAddress("127.0.0.1", 8080));
+        HttpServer server(IpAddress("127.0.0.1", 8080));
     
-        service.setHandler(func);
-        service.work();   
+        server.setHandler(func);
+        std::thread t1([&server]{server.work();});
+        std::thread t2([&server]{server.work();});
+//        server.work();
+        t1.join();
+        t2.join();
 
     } catch (std::runtime_error& err) {
         std::cout << err.what() << std::endl;

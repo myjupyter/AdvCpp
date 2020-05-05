@@ -1,7 +1,7 @@
 #include "client_tcp.h"
 #include <iostream>
 
-static const int BUFFER_SIZE = 4097;
+static const int BUFFER_SIZE = 1 << 16;
 
 namespace Network {
 
@@ -68,15 +68,19 @@ bool BytePackage::hasData() const {
 
 ClientTcp& ClientTcp::operator>>(std::string& package) {
     std::string buffer(BUFFER_SIZE, '\0');
-    if (connection_.read(buffer.data(), buffer.size() - 1)) {
-        std::copy(buffer.begin(), buffer.end(), std::back_inserter(package));
+    std::size_t bytes = 0;
+    while ((bytes = connection_.read(buffer.data(), buffer.size() - 1)) != 0) {
+        std::copy(buffer.begin(), buffer.begin() + bytes, std::back_inserter(package));
+    }
+    if (bytes == 0) {
+        throw std::runtime_error("Client disconnected");
     }
     return *this;
 }
 
 ClientTcp& ClientTcp::operator>>(BytePackage& package) {
     std::string buffer(BUFFER_SIZE, '\0');
-    if (connection_.read(buffer.data(), buffer.size() - 1)) {
+    while (connection_.read(buffer.data(), buffer.size() - 1)) {
         package << buffer;
     }
     return *this;

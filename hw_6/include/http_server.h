@@ -1,5 +1,5 @@
-#ifndef SERVICE_H_
-#define SERVICE_H_
+#ifndef HTTP_SERVER_H_
+#define HTTP_SERVER_H_
 
 #include <unordered_map>
 #include <memory>
@@ -18,11 +18,11 @@ using Client     = std::pair<ClientTcp, BytePackage>;
 using ClientPool = std::unordered_map<int, Client>;
 using CallBack   = std::function<void(Client&)>;
 
-class Service : NonCopyable {
+class HttpServer : NonCopyable {
     public:
-        Service();
-        explicit Service(const IpAddress& address, CallBack handler_ = nullptr);
-        ~Service() = default;
+        HttpServer();
+        explicit HttpServer(const IpAddress& address, CallBack handler_ = nullptr);
+        ~HttpServer() = default;
 
         void work();
         void stop();
@@ -39,6 +39,6 @@ class Service : NonCopyable {
                 
 };
 
-}   // namespace Network::Services 
+}   // namespace Network::HttpServers 
 
-#endif  // SERVICE_H_
+#endif  // HTTP_SERVER_H_

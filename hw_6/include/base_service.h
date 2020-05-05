@@ -8,6 +8,7 @@
 #include <chrono>
 #include <functional>
 #include <system_error>
+#include <tuple>
 
 #include "non_copyable.h"
 
@@ -30,6 +31,12 @@ struct Event {
 
         int getFd() {
             return event_.data.fd;
+        }
+
+        std::tuple<int, uint32_t> getFdMode() {
+            int fd = event_.data.fd;
+            uint32_t events = event_.events;
+            return {fd, events};
         }
 
     public:

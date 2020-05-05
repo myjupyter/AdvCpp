@@ -19,7 +19,7 @@ set(TEST_OUT   test.out)
 add_subdirectory(${LIB_DIR})
 
 set(SERVER_SRCS ${EXM_DIR}/main.cpp)
-set(TEST_SRCS ${EXM_DIR}/test.cpp)
+#set(TEST_SRCS ${EXM_DIR}/test.cpp)
 
 
 # =============== Includes threading for test ============= #
@@ -28,14 +28,15 @@ find_package(Threads REQUIRED)
 
 # =============== Server example executable =============== #
 add_executable(${SERVER_OUT} ${SERVER_SRCS})
-target_link_libraries(${SERVER_OUT} PUBLIC ${LIB_NAME})
-target_include_directories(${SERVER_OUT} PUBLIC ${LIB_DIR})
+target_link_libraries(${SERVER_OUT} PUBLIC ${LIB_NAME}
+                                           Threads::Threads)
+target_include_directories(${SERVER_OUT} PUBLIC ${LIB_DIR} )
 
 # =============== Test example executable ================= #
-add_executable(${TEST_OUT} ${TEST_SRCS})
-target_link_libraries(${TEST_OUT} PUBLIC ${LIB_NAME}
-                                         Threads::Threads)
-target_include_directories(${TEST_OUT} PUBLIC ${LIB_DIR})
+#add_executable(${TEST_OUT} ${TEST_SRCS})
+#target_link_libraries(${TEST_OUT} PUBLIC ${LIB_NAME}
+#                                         Threads::Threads)
+#target_include_directories(${TEST_OUT} PUBLIC ${LIB_DIR})
 
 add_executable(http_packet.out ${EXM_DIR}/test_http_packet.cpp)
 target_link_libraries(http_packet.out PUBLIC ${LIB_NAME}
