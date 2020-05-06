@@ -35,12 +35,11 @@ void func(Client& client_and_data) {
 
 int main() {
     try {
-        HttpServer server(IpAddress("127.0.0.1", 8080));
+        HttpServer server;
     
-        server.setHandler(func);
         std::thread t1([&server]{server.work();});
         std::thread t2([&server]{server.work();});
-//        server.work();
+//          server.work();
         t1.join();
         t2.join();
 

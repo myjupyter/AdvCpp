@@ -1,5 +1,8 @@
 #include "client_tcp.h"
+
 #include <iostream>
+
+#include "client_tcp_ecxep.h"
 
 static const int BUFFER_SIZE = 1 << 16;
 
@@ -64,6 +67,8 @@ bool BytePackage::hasData() const {
     return current_pos_ < data_.size() - 1;
 }
 
+
+
 // Client Tcp
 
 ClientTcp& ClientTcp::operator>>(std::string& package) {
@@ -73,15 +78,19 @@ ClientTcp& ClientTcp::operator>>(std::string& package) {
         std::copy(buffer.begin(), buffer.begin() + bytes, std::back_inserter(package));
     }
     if (bytes == 0) {
-        throw std::runtime_error("Client disconnected");
+        throw Exceptions::ClientDisconnect("Client Disconnected");
     }
     return *this;
 }
 
 ClientTcp& ClientTcp::operator>>(BytePackage& package) {
     std::string buffer(BUFFER_SIZE, '\0');
-    while (connection_.read(buffer.data(), buffer.size() - 1)) {
+    std::size_t bytes = 0;
+    while ((bytes = connection_.read(buffer.data(), buffer.size() - 1)) != 0) {
         package << buffer;
+    }
+    if (bytes == 0) {
+        throw Exceptions::ClientDisconnect("Client Disconnected");
     }
     return *this;
 }

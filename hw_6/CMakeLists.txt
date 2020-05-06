@@ -38,6 +38,13 @@ target_include_directories(${SERVER_OUT} PUBLIC ${LIB_DIR} )
 #                                         Threads::Threads)
 #target_include_directories(${TEST_OUT} PUBLIC ${LIB_DIR})
 
+# ==================== Http Packet  ======================= #
+add_executable(coro.out ${EXM_DIR}/coro_test.cpp)
+target_link_libraries(coro.out PUBLIC ${LIB_NAME}
+                                         Threads::Threads)
+target_include_directories(coro.out PUBLIC ${LIB_DIR})
+
+# ==================== Http Packet  ======================= #
 add_executable(http_packet.out ${EXM_DIR}/test_http_packet.cpp)
 target_link_libraries(http_packet.out PUBLIC ${LIB_NAME}
                                          Threads::Threads)

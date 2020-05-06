@@ -7,6 +7,8 @@
 #include <iostream>
 #include <cstring>
 
+#include "http_packet_excep.h"
+
 std::string HEADER_END = "\r\n";
 std::string EMPTY_STRING = "\r\n\r\n";
 
@@ -18,7 +20,7 @@ namespace Network::Http {
 // HttpHeader
 HttpHeader::HttpHeader(const std::string& head) {
     if (head.empty()) {
-        throw std::invalid_argument("");
+        throw Exceptions::HttpPacketBadPacket("Empty packet WTF mate?");
     }
     
     std::stringstream input(head);
@@ -47,7 +49,7 @@ HttpHeader::HttpHeader(const std::string& head) {
         version_ = std::move(std::string(start->begin() + start->find("/") + 1, start->end()));
         response_line_ = static_cast<Code>(std::stoi(*(++start)));
     } else {
-        throw std::invalid_argument("Invalid first line");
+        throw Exceptions::HttpPacketBadPacket("Invalid first line of packet");
     }
 
     while (std::getline(input, r_line)) {
@@ -58,6 +60,10 @@ HttpHeader::HttpHeader(const std::string& head) {
             break;
         }
         auto pos = r_line.find(":");
+        if (pos == std::string::npos) {
+            throw Exceptions::HttpPacketBadPacket("Bad head field");
+        }
+
         auto begin = r_line.begin();
         headers_.insert({std::string(begin, begin + pos), 
                          std::string(begin + pos + 1, r_line.end())});
@@ -67,20 +73,17 @@ HttpHeader::HttpHeader(const std::string& head) {
 
 std::string HttpHeader::toString() {
     std::string http_head("");
-    try {
-        if (response_line_.has_value()) {
-            auto& code = response_line_.value();
-            http_head = "HTTP/" + version_ + " " + std::to_string(static_cast<int>(code)) + \
-                         " " + CodeMessage[code]; 
-        } else if (request_line_.has_value()) {
-            auto& [method, uri] = request_line_.value();
-            http_head = method + " " + uri + " " + "HTTP/" + version_;
-        } else {
-            throw std::bad_optional_access();
-        }
-    } catch (std::bad_optional_access& err) {
-        throw std::runtime_error("Hello there");
+    if (response_line_.has_value()) {
+        auto& code = response_line_.value();
+        http_head = "HTTP/" + version_ + " " + std::to_string(static_cast<int>(code)) + \
+                     " " + CodeMessage[code]; 
+    } else if (request_line_.has_value()) {
+        auto& [method, uri] = request_line_.value();
+        http_head = method + " " + uri + " " + "HTTP/" + version_;
+    } else {
+        throw Exceptions::HttpPacketBadPacket("Bad formed Http packet");
     }
+    
     http_head += HEADER_END;
 
     std::for_each(headers_.begin(), headers_.end(), [&http_head](auto& field) {

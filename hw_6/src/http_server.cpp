@@ -3,6 +3,8 @@
 #include <iostream>
 #include <thread>
 
+#include "client_tcp_ecxep.h"
+
 #define SERVER_FLAGS EPOLLIN | EPOLLET
 #define EPOLL_FLAGS  EPOLLIN | EPOLLET | EPOLLONESHOT 
 
@@ -10,10 +12,29 @@
 
 namespace Network::Services {
 
+
+CallBack defaultHanlder = [] (Client& client_and_data) {
+    auto& [client, package] = client_and_data; 
+    std::string buffer;
+    try {
+        client >> buffer;
+    } catch (std::system_error& err) {
+        if (err.code().value() == EAGAIN) {
+            client << buffer;
+            return;
+            // Пытаемся сформировать HttpPacket
+            // Если не получается, то кидаем искючение
+            // делаем yield
+        } else {
+            std::throw_with_nested(err);
+        }
+    }
+};
+
 HttpServer::HttpServer()
     : server_(std::make_unique<ServerTcp>(IpAddress("127.0.0.1", 8080)))
     , service_(0)
-    , handler_(nullptr) {
+    , handler_(defaultHanlder) {
         server_->setBlocking(false);
         server_->setMaxConnections(MAX_CONNECTION);        
         server_->listen();
@@ -45,30 +66,27 @@ void HttpServer::work() {
             auto events = event.getMode();
 
             if (socket == server_->getSocket()) {
-                std::cout << "Thread make connect: " << std::this_thread::get_id();
                 makeConnection();
-                std::cout << "Thread made connect: " << std::this_thread::get_id();
             } else {
-                std::cout << "Thread in data section: " << std::this_thread::get_id();
+                std::cout << "Thread in data section: " << std::this_thread::get_id() << std::endl;
                  try {
-                    handler_(client_pool_[socket]);   
+                    handler_(client_pool_[socket]);
+                    service_.modObserve(socket, EPOLL_FLAGS);
                  } catch (std::system_error& err) {
                     if (err.code().value() == EAGAIN) {
                         service_.modObserve(socket, EPOLL_FLAGS);
-                    } 
-                    if (err.code().value() == ECONNRESET) {
-                        std::cout << "Nen" << std::endl;
+                    } else {
                         deleteConnection(socket);
                     }
-                } catch (std::runtime_error& err) {
-                    std::cout << "Null bytes: " << err.what()  << std::endl;
+                } catch (Exceptions::ClientDisconnect& err) {
                     deleteConnection(socket);
                 }
-                std::cout << "Thread out data section: " << std::this_thread::get_id();
+                std::cout << "Thread out data section: " << std::this_thread::get_id() << std::endl;
             }
         });
     }
 }
+
 void HttpServer::makeConnection() {
     Client client_and_package; 
     ConnectionTcp& new_client = client_and_package.first.getCon();
@@ -123,5 +141,9 @@ void HttpServer::stop() {
 void HttpServer::setHandler(CallBack handler) {
     handler_ = handler;
 }
+
+HttpPacket HttpServer::onRequest(const HttpPacket& request) {
+    return HttpPacket();
+}    
 
 }  // namespace Network::HttpServers

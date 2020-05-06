@@ -2,9 +2,6 @@
 #define CORO_CORO_H_
 
 #include <ucontext.h>
-
-#include <list>
-#include <vector>
 #include <functional>
 #include <memory>
 
@@ -15,35 +12,46 @@ static constexpr std::size_t ROUTINE_STACK_SIZE = 1 << 20;
 namespace Network::Coro {
 
 using routine_t = std::size_t;
-using Routine = std::function<void()>:
+using RoutineFunc = std::function<void()>;
 
-class Coroutine;
+routine_t create(routine_t id, const RoutineFunc& func);
+bool resume(routine_t id);
+void yield();
+routine_t current();
+void entry();
 
-thread_local struct Ordinator {
-    ucontext_t main_ctx = {};
-    routine_t current_routine = 0;
-    
-    std::vector<Coroutine> coroutines;
-    std::list<routine_t> finished_rotine;
-} ordinator;
 
-class Coroutine : public NonCopyable {
+template <typename T, typename F, typename ...Args, typename = std::enable_if_t<!std::is_invocable_v<F>>> 
+routine_t create(T&& t, F&& f, Args&&... args) {
+    return create(std::forward<T>(t), std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+}
+
+template <typename T, typename F, typename ...Args> 
+bool create_and_run(T&& t, F&& f, Args&&... args) {
+    return resume(create(std::forward<T>(t), std::forward<F>(f), std::forward<Args>(args)...));
+}
+
+class Routine : public NonCopyable {
     public:
-        Coroutine() = delete;
-        Сoroutine(Routine routine);
-        ~Coroutine();
+        Routine();
+        Routine(const RoutineFunc& routine);
+        Routine(Routine&& routine);
+        Routine& operator=(Routine&& routine);
+        ~Routine() = default;
 
-        void reset(const Routine& routine);
+        void reset(const RoutineFunc& routine);
 
-        bool resume();
-
-    private:
+//  private:
         bool is_finished_;
-        Routine routine_;
+        bool is_working_;
 
         ucontext_t routine_ctx_;
-        std::unique_ptr<std::byte*> stack_;
+        std::unique_ptr<uint8_t[]> stack_;
+        
+        RoutineFunc routine_;
+        std::exception_ptr exception_;
 };
+
 
 }  // Network::Coro
 
