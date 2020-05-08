@@ -7,63 +7,36 @@ namespace Network::Coro {
 
 thread_local struct Ordinator {
     ucontext_t thread_ctx = {};
-    routine_t current = 0;
-    routine_t routine_id = 0;
 
-    Routine routine;
+    Routine* routine = nullptr;
 } ordinator;
 
-routine_t create(routine_t id, const RoutineFunc& func) {
-    ordinator.routine.reset(func);
-    ordinator.routine_id = id;
-    return id; 
-}
-
-bool resume(routine_t id) {
-    if (ordinator.routine_id != id) {
-        return false; 
-    }
-
-    if (ordinator.routine.is_finished_ || 
-        ordinator.routine.is_working_) {
-        return false;
-    }
-
-    ordinator.routine.is_working_ = true;
-    ordinator.current = id;
-
-    if (::swapcontext(&ordinator.thread_ctx, &ordinator.routine.routine_ctx_) == -1) {
-        ordinator.current = 0;
-        throw std::runtime_error(std::strerror(errno));
-    }
-    
-    ordinator.current = 0;
-    ordinator.routine.is_working_ = false;
-
-    if (ordinator.routine.exception_) {
-        std::rethrow_exception(ordinator.routine.exception_);
-    }
-    return true;
-}
-
 void yield() {
-   ordinator.current = 0;
-    if (::swapcontext(&ordinator.routine.routine_ctx_, &ordinator.thread_ctx) == -1) {
+    if (ordinator.routine == nullptr) {
+        return;
+    }
+    if (::swapcontext(&ordinator.routine->routine_ctx_, &ordinator.thread_ctx) == -1) {
         throw std::runtime_error(std::strerror(errno));
     }
 }
 
 void entry() {
-    if (ordinator.routine.routine_) try {
-        ordinator.routine.routine_();
-    } catch (...) {
-        ordinator.routine.exception_ = std::current_exception();
+    auto& ord = ordinator;
+    auto& rout = ord.routine;
+
+    if (!rout) {
+        return;
     }
 
-    ordinator.routine.is_finished_ = true;
-    ordinator.current = 0;
+    if (rout->routine_) try {
+        rout->routine_();
+    } catch (...) {
+        rout->exception_ = std::current_exception();
+    }
 
-    if (::swapcontext(&ordinator.routine.routine_ctx_, &ordinator.thread_ctx) == -1) {
+    rout->is_finished_ = true;
+
+    if (::swapcontext(&rout->routine_ctx_, &ord.thread_ctx) == -1) {
         throw std::runtime_error(std::strerror(errno));
     }
 }
@@ -81,10 +54,9 @@ Routine::Routine()
     ::makecontext(&routine_ctx_, entry, 0);    
 }
 
-
-Routine::Routine(const RoutineFunc& routine) 
+Routine::Routine(RoutineFunc&& routine) 
     : Routine() {
-    routine_ = routine;    
+    routine_ = routine;
 }
 
 Routine::Routine(Routine&& routine) {
@@ -113,8 +85,35 @@ Routine& Routine::operator=(Routine&& routine) {
     return *this;
 }
 
+bool Routine::resume() {
+    auto& ord = ordinator;
+    ord.routine = this;
+    auto& rout = ord.routine;
 
-void Routine::reset(const RoutineFunc& routine) {
+    if (rout->is_finished_ || 
+        rout->is_working_) {
+        return false;
+    }
+
+    rout->is_working_ = true;
+
+    if (::swapcontext(&ord.thread_ctx, &rout->routine_ctx_) == -1) {
+        ord.routine = nullptr;
+        throw std::runtime_error(std::strerror(errno));
+    }
+    
+    rout->is_working_ = false;
+    
+    if (rout->exception_) {
+        std::rethrow_exception(rout->exception_);
+    }
+    
+    ord.routine = nullptr;
+
+    return true;
+}
+
+void Routine::reset(RoutineFunc&& routine) {
     is_finished_ = false;
     is_working_ = false;
 

@@ -14,34 +14,22 @@ namespace Network::Coro {
 using routine_t = std::size_t;
 using RoutineFunc = std::function<void()>;
 
-routine_t create(routine_t id, const RoutineFunc& func);
-bool resume(routine_t id);
 void yield();
-routine_t current();
 void entry();
-
-
-template <typename T, typename F, typename ...Args, typename = std::enable_if_t<!std::is_invocable_v<F>>> 
-routine_t create(T&& t, F&& f, Args&&... args) {
-    return create(std::forward<T>(t), std::bind(std::forward<F>(f), std::forward<Args>(args)...));
-}
-
-template <typename T, typename F, typename ...Args> 
-bool create_and_run(T&& t, F&& f, Args&&... args) {
-    return resume(create(std::forward<T>(t), std::forward<F>(f), std::forward<Args>(args)...));
-}
 
 class Routine : public NonCopyable {
     public:
         Routine();
-        Routine(const RoutineFunc& routine);
+        Routine(RoutineFunc&& routine);
         Routine(Routine&& routine);
         Routine& operator=(Routine&& routine);
         ~Routine() = default;
 
-        void reset(const RoutineFunc& routine);
+        bool resume();
 
-//  private:
+        void reset(RoutineFunc&& routine);
+
+    public:
         bool is_finished_;
         bool is_working_;
 
