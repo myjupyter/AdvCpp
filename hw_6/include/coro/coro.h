@@ -30,7 +30,6 @@ class Routine : public NonCopyable {
         void reset(RoutineFunc&& routine);
 
     public:
-        bool is_finished_;
         bool is_working_;
 
         ucontext_t routine_ctx_;

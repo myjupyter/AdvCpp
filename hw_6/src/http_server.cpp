@@ -12,19 +12,15 @@
 
 namespace Network::Services {
 
-
 CallBack defaultHanlder = [] (Client& client_and_data) {
     auto& [client, package] = client_and_data; 
     std::string buffer;
     try {
         client >> buffer;
     } catch (std::system_error& err) {
-        if (err.code().value() == EAGAIN) {
-           client << buffer;
+        if (err.code().value() == EAGAIN) { 
+            client << buffer;
            return;
-            // Пытаемся сформировать HttpPacket
-            // Если не получается, то кидаем искючение
-            // делаем yield
         } else {
             std::throw_with_nested(err);
         }
@@ -40,7 +36,7 @@ HttpServer::HttpServer()
         server_->setMaxConnections(MAX_CONNECTION);        
         server_->listen();
         service_.setObserve(server_->getSocket(), SERVER_FLAGS);
-        service_.setTimeout(1);
+        service_.setTimeout(100);
 } 
 
 HttpServer::HttpServer(const IpAddress& address, CallBack handler) 
@@ -51,7 +47,7 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
         server_->setMaxConnections(MAX_CONNECTION);        
         server_->listen();
         service_.setObserve(server_->getSocket(), SERVER_FLAGS);  
-        service_.setTimeout(1); 
+        service_.setTimeout(100); 
 }
 
 
@@ -63,23 +59,23 @@ void HttpServer::work() {
     while (server_->isOpened()) {
         int n = service_.wait();
         
-        // connection processing 
         service_.process(n, [this] (Event& event) {
-            int socket = event.getFd();
+            auto socket = event.getEventInfo();
+            auto& fd = socket->fd;
+            auto& routine = socket->rout;
             auto events = event.getMode();
 
-            if (socket == server_->getSocket()) {
+            if (fd == server_->getSocket()) {
                 makeConnection();
             } else {
-    //            std::cout << "Thread in data section: " << std::this_thread::get_id() << std::endl;
-                if (!client_pool_.contains(socket)) {
+                if (!client_pool_.contains(fd)) {
                     return;
                 }
                 try {
-                    handler_(client_pool_[socket]);
+                    routine.resume();
                     service_.modObserve(socket, EPOLL_FLAGS);
                  } catch (std::system_error& err) {
-                    std::cerr << err.what() << std::endl;
+                     std::cerr << err.what() << std::endl;
                      deleteConnection(socket);
                  } catch (Exceptions::ClientDisconnect& err) {
                     std::cerr << err.what() << std::endl;
@@ -87,7 +83,6 @@ void HttpServer::work() {
                  } catch (...) {
                     deleteConnection(socket);
                  }
-      //          std::cout << "Thread out data section: " << std::this_thread::get_id() << std::endl;
             }
         });
     }
@@ -101,6 +96,12 @@ void HttpServer::makeConnection() {
     server_->accept(new_client);
     int fd = new_client.getSocket();
 
+    new_client.setBlocking(false);
+    client_pool_.insert({fd, std::move(client_and_package)});
+    EventInfo* ei = service_.setObserve(fd, EPOLL_FLAGS);
+    
+    ei->rout.reset(std::bind(handler_, std::ref(client_pool_[fd])));
+
     #ifdef DEBUG
     std::clog << "Connected: " 
               << fd 
@@ -110,20 +111,21 @@ void HttpServer::makeConnection() {
               << new_client.getInfo().getPort() 
               << std::endl;
     #endif
-
-    new_client.setBlocking(false);
-    client_pool_.insert({fd, std::move(client_and_package)});
-    service_.setObserve(fd, EPOLL_FLAGS);
 }
 
-void HttpServer::deleteConnection(int fd) {
+void HttpServer::deleteConnection(EventInfo* socket) {
     std::lock_guard<std::mutex> lock(mutex_);
     
-    ConnectionTcp& client = client_pool_[fd].first.getCon();
-    
+    ConnectionTcp& client = client_pool_[socket->fd].first.getCon();
+ 
+    client_pool_.erase(socket->fd);
+    try {
+        this->service_.delObserve(socket);
+    } catch (std::system_error& err) {}
+   
     #ifdef DEBUG
     std::clog << "Client disconnected: " 
-              << fd
+              << socket->fd
               << " " 
               << client.getInfo().getIp() 
               << client.getInfo().getPort()
@@ -132,16 +134,11 @@ void HttpServer::deleteConnection(int fd) {
     std::clog << "Still connected client: " 
               << client_pool_.size() 
               << std::endl;
-    #endif
-    
-    try {
-        this->service_.delObserve(fd);
-    } catch (std::system_error& err) {}
-    client_pool_.erase(fd);
+    #endif    
 }
 
 void HttpServer::stop() {
-    service_.delObserve(server_->getSocket());
+    //service_.delObserve(server_->getSocket());
     server_->close();
 
     client_pool_.clear();

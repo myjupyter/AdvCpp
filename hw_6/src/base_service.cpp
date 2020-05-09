@@ -48,30 +48,34 @@ void BaseService::setTimeout(std::chrono::milliseconds usec) {
     timeout_usec_ = usec.count();
 }
 
-void BaseService::setObserve(int socket, uint32_t mode) {
-    epoll_event event = {.events = mode, .data = {.fd = socket}};
-
+EventInfo* BaseService::setObserve(int socket, uint32_t mode) {
+    EventInfo* ei = new EventInfo(socket);
+    epoll_event event = {.events = mode, .data = {.ptr = ei}};
+    
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket, &event)) {
         throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
                                 "BaseService::setObserve");
     }
+    
+    return ei;
 }
 
-void BaseService::modObserve(int socket, uint32_t mode) {
-    epoll_event event = {.events = mode, .data = {.fd = socket}};
+void BaseService::modObserve(EventInfo* socket, uint32_t mode) {
+    epoll_event event = {.events = mode, .data = {.ptr = socket}};
 
-    if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, socket, &event)) {
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, socket->fd, &event)) {
         throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
                                 "BaseService::modObserve");
     }
 }
 
-void BaseService::delObserve(int socket) {
-    if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr)) {
+void BaseService::delObserve(EventInfo* socket) {
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket->fd, nullptr)) {
         throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), 
                                 "BaseService::delObserve");
 
     }
+    delete socket;
 }
 
 }   // namespace Network::Services 

@@ -34,16 +34,15 @@ void entry() {
         rout->exception_ = std::current_exception();
     }
 
-    rout->is_finished_ = true;
-
     if (::swapcontext(&rout->routine_ctx_, &ord.thread_ctx) == -1) {
         throw std::runtime_error(std::strerror(errno));
     }
+
+    rout->reset(std::forward<RoutineFunc>(rout->routine_));
 }
 
 Routine::Routine()  
-    : is_finished_(false)
-    , is_working_(false)
+    : is_working_(false)
     , stack_(std::make_unique<uint8_t[]>(ROUTINE_STACK_SIZE))
     , exception_{} {
     routine_ctx_.uc_stack.ss_sp = stack_.get();
@@ -52,6 +51,8 @@ Routine::Routine()
 
     ::getcontext(&routine_ctx_);
     ::makecontext(&routine_ctx_, entry, 0);    
+
+    routine_ = nullptr;    
 }
 
 Routine::Routine(RoutineFunc&& routine) 
@@ -60,7 +61,6 @@ Routine::Routine(RoutineFunc&& routine)
 }
 
 Routine::Routine(Routine&& routine) {
-    is_finished_ = routine.is_finished_;
     is_working_ = routine.is_working_;
 
     stack_ = std::move(routine.stack_);
@@ -74,7 +74,6 @@ Routine& Routine::operator=(Routine&& routine) {
     if (this == &routine) {
         return *this;
     }
-    is_finished_ = routine.is_finished_;
     is_working_ = routine.is_working_;
 
     stack_ = std::move(routine.stack_);
@@ -90,8 +89,7 @@ bool Routine::resume() {
     ord.routine = this;
     auto& rout = ord.routine;
 
-    if (rout->is_finished_ || 
-        rout->is_working_) {
+    if (rout->is_working_) {
         return false;
     }
 
@@ -114,7 +112,6 @@ bool Routine::resume() {
 }
 
 void Routine::reset(RoutineFunc&& routine) {
-    is_finished_ = false;
     is_working_ = false;
 
     routine_ = routine;

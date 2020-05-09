@@ -16,28 +16,30 @@
 namespace Network::Services {
 
 struct EventInfo {
-    int fd;
+    EventInfo() = default;
+    EventInfo(int fd) : fd{fd}, rout{} {}
+    ~EventInfo() = default;
+
+    int fd = -1;
     Coro::Routine rout;
 };
 
 struct Event {
         Event() {
-            event_.data.fd = -1;
+            event_.data.ptr = nullptr;
             event_.events = 0;
         }
-        Event(int socket, uint32_t mode) {
-            event_.data.fd = socket;
-            event_.events = mode;
-        }
+        
         ~Event() = default;
 
-        int getMode() {
+        int getMode() const {
             return event_.events;
         }
 
-        int getFd() {
-            return event_.data.fd;
+        EventInfo* getEventInfo() {
+            return reinterpret_cast<EventInfo*>(event_.data.ptr);
         }
+
 
     public:
         epoll_event event_;
@@ -57,9 +59,9 @@ class BaseService : NonCopyable {
         void setTimeout(int usec);
         void setTimeout(std::chrono::milliseconds usec);
 
-        void setObserve(int socket, uint32_t mode); 
-        void modObserve(int socket, uint32_t mode);
-        void delObserve(int scoket);
+        EventInfo* setObserve(int socket, uint32_t mode); 
+        void modObserve(EventInfo* socket, uint32_t mode);
+        void delObserve(EventInfo* scoket);
 
     private:
         int epoll_fd_;

@@ -6,12 +6,12 @@
 using namespace Network::Coro;
 
 
-void foo(int start, int end) {
+auto foo = [] (int& start, int& end) {
     for (int i = start; i < end; i += 2) {
         std::cout << i << std::endl;
         yield();
     }
-}
+};
 
 int main() {
     Routine rout(std::bind(foo, std::forward<int>(1), std::forward<int>(10)));

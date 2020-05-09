@@ -40,7 +40,7 @@ class HttpServer : NonCopyable {
         virtual HttpPacket onRequest(const HttpPacket& request);        
     private:
         void makeConnection();
-        void deleteConnection(int fd);
+        void deleteConnection(EventInfo* socket);
 
         std::mutex mutex_;
         Server server_;

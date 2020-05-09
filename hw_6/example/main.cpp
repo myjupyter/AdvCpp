@@ -13,7 +13,13 @@ int main() {
     try {
         HttpServer server;
   
-        std::thread t2([&server]{server.work();});
+        std::thread t2([&server]{
+                try {
+                server.work();
+                } catch (...) {
+                }
+
+                });
         t2.join();
 
     } catch (std::runtime_error& err) {
