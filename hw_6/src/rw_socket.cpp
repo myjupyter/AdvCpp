@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include <iostream>
+
 inline static bool IS_NONBLOCK_ERRNO(int error_code) { 
     return (error_code == EAGAIN || error_code == EWOULDBLOCK);
 }

@@ -5,6 +5,7 @@
 #include <memory>
 #include <functional>
 #include <utility>
+#include <mutex>
 
 #include "server_tcp.h"
 #include "client_tcp.h"
@@ -41,6 +42,7 @@ class HttpServer : NonCopyable {
         void makeConnection();
         void deleteConnection(int fd);
 
+        std::mutex mutex_;
         Server server_;
         ClientPool client_pool_;
         BaseService service_;

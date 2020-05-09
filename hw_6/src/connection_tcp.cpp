@@ -5,19 +5,19 @@ namespace Network {
 ConnectionTcp::ConnectionTcp()
     : RWSocket(Socket::SockType::TCP)
     , dest_addr_(IpAddress()) {
-    SocketManager::setOption(getSocket(), SO_REUSEADDR);    
+    SocketManager::setOption(getSocket(), SO_REUSEADDR | SO_REUSEPORT);    
 }
 
 ConnectionTcp::ConnectionTcp(const IpAddress& addr)
     : RWSocket(Socket::SockType::TCP)
     , dest_addr_(addr) {
-    SocketManager::setOption(getSocket(), SO_REUSEADDR);    
+    SocketManager::setOption(getSocket(), SO_REUSEADDR | SO_REUSEPORT);    
 }
 
 ConnectionTcp::ConnectionTcp(int socket, const IpAddress& addr) 
     : RWSocket(socket)
     , dest_addr_(addr) {
-    SocketManager::setOption(getSocket(), SO_REUSEADDR);
+    SocketManager::setOption(getSocket(), SO_REUSEADDR | SO_REUSEPORT);
     setSocketStatus(Socket::OK);
 }
 

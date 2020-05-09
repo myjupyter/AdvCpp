@@ -11,8 +11,14 @@
 #include <tuple>
 
 #include "non_copyable.h"
+#include "coro.h"
 
 namespace Network::Services {
+
+struct EventInfo {
+    int fd;
+    Coro::Routine rout;
+};
 
 struct Event {
         Event() {
@@ -31,12 +37,6 @@ struct Event {
 
         int getFd() {
             return event_.data.fd;
-        }
-
-        std::tuple<int, uint32_t> getFdMode() {
-            int fd = event_.data.fd;
-            uint32_t events = event_.events;
-            return {fd, events};
         }
 
     public:

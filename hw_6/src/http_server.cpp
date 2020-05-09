@@ -8,7 +8,7 @@
 #define SERVER_FLAGS EPOLLIN | EPOLLET
 #define EPOLL_FLAGS  EPOLLIN | EPOLLET | EPOLLONESHOT 
 
-#define MAX_CONNECTION 0xff
+#define MAX_CONNECTION 0xffff
 
 namespace Network::Services {
 
@@ -20,8 +20,8 @@ CallBack defaultHanlder = [] (Client& client_and_data) {
         client >> buffer;
     } catch (std::system_error& err) {
         if (err.code().value() == EAGAIN) {
-            client << buffer;
-            return;
+           client << buffer;
+           return;
             // Пытаемся сформировать HttpPacket
             // Если не получается, то кидаем искючение
             // делаем yield
@@ -29,26 +29,29 @@ CallBack defaultHanlder = [] (Client& client_and_data) {
             std::throw_with_nested(err);
         }
     }
+    client << buffer;
 };
 
 HttpServer::HttpServer()
     : server_(std::make_unique<ServerTcp>(IpAddress("127.0.0.1", 8080)))
-    , service_(0)
+    , service_{}
     , handler_(defaultHanlder) {
         server_->setBlocking(false);
         server_->setMaxConnections(MAX_CONNECTION);        
         server_->listen();
         service_.setObserve(server_->getSocket(), SERVER_FLAGS);
+        service_.setTimeout(1);
 } 
 
 HttpServer::HttpServer(const IpAddress& address, CallBack handler) 
     : server_(std::make_unique<ServerTcp>(address))
-    , service_(0)
+    , service_{}
     , handler_(handler) {
         server_->setBlocking(false);
         server_->setMaxConnections(MAX_CONNECTION);        
         server_->listen();
         service_.setObserve(server_->getSocket(), SERVER_FLAGS);  
+        service_.setTimeout(1); 
 }
 
 
@@ -68,26 +71,30 @@ void HttpServer::work() {
             if (socket == server_->getSocket()) {
                 makeConnection();
             } else {
-                std::cout << "Thread in data section: " << std::this_thread::get_id() << std::endl;
-                 try {
+    //            std::cout << "Thread in data section: " << std::this_thread::get_id() << std::endl;
+                if (!client_pool_.contains(socket)) {
+                    return;
+                }
+                try {
                     handler_(client_pool_[socket]);
                     service_.modObserve(socket, EPOLL_FLAGS);
                  } catch (std::system_error& err) {
-                    if (err.code().value() == EAGAIN) {
-                        service_.modObserve(socket, EPOLL_FLAGS);
-                    } else {
-                        deleteConnection(socket);
-                    }
-                } catch (Exceptions::ClientDisconnect& err) {
+                    std::cerr << err.what() << std::endl;
+                     deleteConnection(socket);
+                 } catch (Exceptions::ClientDisconnect& err) {
+                    std::cerr << err.what() << std::endl;
                     deleteConnection(socket);
-                }
-                std::cout << "Thread out data section: " << std::this_thread::get_id() << std::endl;
+                 } catch (...) {
+                    deleteConnection(socket);
+                 }
+      //          std::cout << "Thread out data section: " << std::this_thread::get_id() << std::endl;
             }
         });
     }
 }
 
 void HttpServer::makeConnection() {
+    std::lock_guard<std::mutex> lock(mutex_);
     Client client_and_package; 
     ConnectionTcp& new_client = client_and_package.first.getCon();
 
@@ -110,6 +117,8 @@ void HttpServer::makeConnection() {
 }
 
 void HttpServer::deleteConnection(int fd) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    
     ConnectionTcp& client = client_pool_[fd].first.getCon();
     
     #ifdef DEBUG

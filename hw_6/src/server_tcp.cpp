@@ -9,7 +9,7 @@ ServerTcp::ServerTcp()
     : Socket(SockType::TCP)
     , server_addr_(IpAddress({DEFAULT_PORT}))
     , max_connections_(MAX_CONNECTIONS) {
-    SocketManager::setOption(getSocket(), SO_REUSEADDR);
+    SocketManager::setOption(getSocket(), SO_REUSEADDR | SO_REUSEPORT);
     SocketManager::bindSocket(getSocket(), server_addr_);        
     setSocketStatus(Socket::OK);
 }
