@@ -7,42 +7,36 @@ namespace Network::Coro {
 
 thread_local struct Ordinator {
     ucontext_t thread_ctx = {};
-
     Routine* routine = nullptr;
 } ordinator;
 
 void yield() {
+    auto& ord = ordinator;
+    auto& rout = ord.routine;
+    if (::swapcontext(&rout->routine_ctx_, &ord.thread_ctx) == -1) {
+        throw std::runtime_error(std::strerror(errno));
+    }
+}
+
+void entry() {
     if (ordinator.routine == nullptr) {
-        return;
+        throw std::runtime_error("null");
+    }
+
+    if (ordinator.routine->routine_ ) try {
+        ordinator.routine->routine_();
+        ordinator.routine->is_finished_ = true;
+    } catch (...) {
+        ordinator.routine->exception_ = std::current_exception();
     }
     if (::swapcontext(&ordinator.routine->routine_ctx_, &ordinator.thread_ctx) == -1) {
         throw std::runtime_error(std::strerror(errno));
     }
 }
 
-void entry() {
-    auto& ord = ordinator;
-    auto& rout = ord.routine;
-
-    if (!rout) {
-        return;
-    }
-
-    if (rout->routine_) try {
-        rout->routine_();
-    } catch (...) {
-        rout->exception_ = std::current_exception();
-    }
-
-    if (::swapcontext(&rout->routine_ctx_, &ord.thread_ctx) == -1) {
-        throw std::runtime_error(std::strerror(errno));
-    }
-
-    rout->reset(std::forward<RoutineFunc>(rout->routine_));
-}
-
 Routine::Routine()  
-    : is_working_(false)
+    : is_finished_(false)
+    , is_working_(false)
     , stack_(std::make_unique<uint8_t[]>(ROUTINE_STACK_SIZE))
     , exception_{} {
     routine_ctx_.uc_stack.ss_sp = stack_.get();
@@ -61,6 +55,7 @@ Routine::Routine(RoutineFunc&& routine)
 }
 
 Routine::Routine(Routine&& routine) {
+    is_finished_ = routine.is_finished_;
     is_working_ = routine.is_working_;
 
     stack_ = std::move(routine.stack_);
@@ -74,6 +69,7 @@ Routine& Routine::operator=(Routine&& routine) {
     if (this == &routine) {
         return *this;
     }
+    is_finished_ = routine.is_finished_;
     is_working_ = routine.is_working_;
 
     stack_ = std::move(routine.stack_);
@@ -89,6 +85,10 @@ bool Routine::resume() {
     ord.routine = this;
     auto& rout = ord.routine;
 
+    if (rout->is_finished_) {
+        again();
+    }
+
     if (rout->is_working_) {
         return false;
     }
@@ -99,7 +99,7 @@ bool Routine::resume() {
         ord.routine = nullptr;
         throw std::runtime_error(std::strerror(errno));
     }
-    
+
     rout->is_working_ = false;
     
     if (rout->exception_) {
@@ -112,11 +112,21 @@ bool Routine::resume() {
 }
 
 void Routine::reset(RoutineFunc&& routine) {
+    is_finished_ = false;
     is_working_ = false;
 
     routine_ = routine;
     exception_ = {};
     
+    ::makecontext(&routine_ctx_, entry, 0);
+}
+
+void Routine::again() {
+    is_finished_ = false;
+    is_working_ = false;
+
+    exception_ = {};
+
     ::makecontext(&routine_ctx_, entry, 0);
 }
 

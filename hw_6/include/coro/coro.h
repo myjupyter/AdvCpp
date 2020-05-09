@@ -28,8 +28,9 @@ class Routine : public NonCopyable {
         bool resume();
 
         void reset(RoutineFunc&& routine);
-
+        void again();
     public:
+        bool is_finished_;
         bool is_working_;
 
         ucontext_t routine_ctx_;

@@ -16,16 +16,15 @@ CallBack defaultHanlder = [] (Client& client_and_data) {
     auto& [client, package] = client_and_data; 
     std::string buffer;
     try {
-        client >> buffer;
+        client >> package;
     } catch (std::system_error& err) {
         if (err.code().value() == EAGAIN) { 
-            client << buffer;
-           return;
+            Coro::yield();
+            client << package;
         } else {
             std::throw_with_nested(err);
         }
     }
-    client << buffer;
 };
 
 HttpServer::HttpServer()
@@ -66,8 +65,11 @@ void HttpServer::work() {
             auto events = event.getMode();
 
             if (fd == server_->getSocket()) {
+                std::cout <<"Make conn: " << std::this_thread::get_id() << std::endl;
                 makeConnection();
+                std::cout <<"Exit make conn: " << std::this_thread::get_id() << std::endl;
             } else {
+                std::cout <<"Data: " << std::this_thread::get_id() << std::endl;
                 if (!client_pool_.contains(fd)) {
                     return;
                 }
@@ -83,6 +85,7 @@ void HttpServer::work() {
                  } catch (...) {
                     deleteConnection(socket);
                  }
+                std::cout <<"exit data: " << std::this_thread::get_id() << std::endl;
             }
         });
     }
