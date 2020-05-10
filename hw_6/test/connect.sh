@@ -6,7 +6,7 @@ for i in $(seq 1000); do
     cat message | nc localhost 8080 & 
 done
 
-sleep 10
+sleep 10s
 
 pkill nc
 rm ./message

@@ -14,16 +14,19 @@ auto foo = [] (int& start, int& end) {
 };
 
 int main() {
-    Routine rout(std::bind(foo, std::forward<int>(1), std::forward<int>(10)));
+    Routine* rout = new Routine(std::bind(foo, std::forward<int>(1), std::forward<int>(10)));
 
     std::thread t([&rout] () {
             for (int i = 0; i < 10; i += 2) {
                 std::cout << i << std::endl;
-                rout.resume();
+                rout->resume();
             }
     });
 
     t.join();
+
+
+    delete rout;
     
     return 0;
 }

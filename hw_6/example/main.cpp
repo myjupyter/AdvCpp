@@ -11,14 +11,9 @@ using namespace Network::Services;
 
 int main() {
     try {
-        HttpServer server;
+        HttpServer server({"127.0.0.1", 8080}, nullptr);
   
-        std::thread t3([&server]{server.work();});
-        std::thread t2([&server]{server.work();});
-        std::thread t1([&server]{server.work();});
-        t3.join();
-        t2.join();
-        t1.join();
+        server.work();
 
     } catch (std::runtime_error& err) {
         std::cout << err.what() << std::endl;

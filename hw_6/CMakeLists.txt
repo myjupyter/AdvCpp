@@ -49,3 +49,9 @@ add_executable(http_packet.out ${EXM_DIR}/test_http_packet.cpp)
 target_link_libraries(http_packet.out PUBLIC ${LIB_NAME}
                                          Threads::Threads)
 target_include_directories(http_packet.out PUBLIC ${LIB_DIR})
+
+# ==================== Threads  ======================= #
+add_executable(threads.out ${EXM_DIR}/threads.cpp)
+target_link_libraries(threads.out PUBLIC ${LIB_NAME}
+                                         Threads::Threads)
+target_include_directories(threads.out PUBLIC ${LIB_DIR})

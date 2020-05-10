@@ -18,6 +18,7 @@ namespace Network::Services {
 struct EventInfo {
     EventInfo() = default;
     EventInfo(int fd) : fd{fd}, rout{} {}
+    EventInfo(int fd, Coro::RoutineFunc&& func) : fd{fd}, rout{std::move(func)} {}
     ~EventInfo() = default;
 
     int fd = -1;
@@ -52,20 +53,17 @@ class BaseService : NonCopyable {
         BaseService(int flags = 0);
         ~BaseService(); 
 
-        int wait();
-        void process(int active_con, std::function<void(Event&)> func);
+        int wait(Events& events);
 
-        void setMaxEvents(std::size_t count);
         void setTimeout(int usec);
         void setTimeout(std::chrono::milliseconds usec);
 
-        EventInfo* setObserve(int socket, uint32_t mode); 
+        EventInfo* setObserve(EventInfo* socket, uint32_t mode); 
         void modObserve(EventInfo* socket, uint32_t mode);
         void delObserve(EventInfo* scoket);
 
     private:
         int epoll_fd_;
-        mutable Events events_;
         mutable int timeout_usec_;
 };
 

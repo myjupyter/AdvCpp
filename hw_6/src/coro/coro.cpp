@@ -2,6 +2,8 @@
 #include <cerrno>
 
 #include <cstring>
+#include <iostream>
+#include <thread>
 
 namespace Network::Coro {
 
@@ -11,6 +13,9 @@ thread_local struct Ordinator {
 } ordinator;
 
 void yield() {
+    if (ordinator.routine == nullptr) {
+        return;
+    }
     if (::swapcontext(&ordinator.routine->routine_ctx_, &ordinator.thread_ctx) == -1) {
         throw std::runtime_error(std::strerror(errno));
     }
@@ -79,6 +84,7 @@ Routine& Routine::operator=(Routine&& routine) {
 }
 
 bool Routine::resume() {
+    
     ordinator.routine = this;
 
     if (ordinator.routine->is_finished_) {
