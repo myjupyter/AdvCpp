@@ -18,7 +18,7 @@ ServerTcp::ServerTcp(const IpAddress& address)
     : Socket(SockType::TCP)
     , server_addr_(address)
     , max_connections_(MAX_CONNECTIONS) {
-    SocketManager::setOption(getSocket(), SO_REUSEADDR);
+    SocketManager::setOption(getSocket(), SO_REUSEADDR | SO_REUSEPORT);
     SocketManager::bindSocket(getSocket(), server_addr_);    
     setSocketStatus(Socket::OK);
 }

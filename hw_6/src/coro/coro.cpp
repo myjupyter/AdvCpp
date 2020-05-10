@@ -11,9 +11,7 @@ thread_local struct Ordinator {
 } ordinator;
 
 void yield() {
-    auto& ord = ordinator;
-    auto& rout = ord.routine;
-    if (::swapcontext(&rout->routine_ctx_, &ord.thread_ctx) == -1) {
+    if (::swapcontext(&ordinator.routine->routine_ctx_, &ordinator.thread_ctx) == -1) {
         throw std::runtime_error(std::strerror(errno));
     }
 }
@@ -81,32 +79,30 @@ Routine& Routine::operator=(Routine&& routine) {
 }
 
 bool Routine::resume() {
-    auto& ord = ordinator;
-    ord.routine = this;
-    auto& rout = ord.routine;
+    ordinator.routine = this;
 
-    if (rout->is_finished_) {
+    if (ordinator.routine->is_finished_) {
         again();
     }
 
-    if (rout->is_working_) {
+    if (ordinator.routine->is_working_) {
         return false;
     }
 
-    rout->is_working_ = true;
+    ordinator.routine->is_working_ = true;
 
-    if (::swapcontext(&ord.thread_ctx, &rout->routine_ctx_) == -1) {
-        ord.routine = nullptr;
+    if (::swapcontext(&ordinator.thread_ctx, &ordinator.routine->routine_ctx_) == -1) {
+        ordinator.routine = nullptr;
         throw std::runtime_error(std::strerror(errno));
     }
 
-    rout->is_working_ = false;
+    ordinator.routine->is_working_ = false;
     
-    if (rout->exception_) {
-        std::rethrow_exception(rout->exception_);
+    if (ordinator.routine->exception_) {
+        std::rethrow_exception(ordinator.routine->exception_);
     }
     
-    ord.routine = nullptr;
+    ordinator.routine = nullptr;
 
     return true;
 }
