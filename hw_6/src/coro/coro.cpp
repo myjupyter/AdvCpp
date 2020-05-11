@@ -23,7 +23,7 @@ void yield() {
 
 void entry() {
     if (ordinator.routine == nullptr) {
-        throw std::runtime_error("null");
+        throw std::runtime_error("nullptr routine");
     }
 
     if (ordinator.routine->routine_ ) try {

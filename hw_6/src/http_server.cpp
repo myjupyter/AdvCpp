@@ -130,7 +130,7 @@ void HttpServer::work() {
 
 void HttpServer::makeConnection() {
     std::lock_guard<std::mutex> lock(mutex_);
-    Client client_and_package; 
+    Client client_and_package;
 
     ConnectionTcp& new_client = client_and_package.first.getCon();
 
@@ -141,10 +141,10 @@ void HttpServer::makeConnection() {
     
     client_pool_.insert({fd, std::move(client_and_package)});
     
-    EventInfo* ei = service_.setObserve(new EventInfo{fd,std::bind(handler_, std::ref(client_pool_[fd]))}, EPOLL_FLAGS);
+    EventInfo* ei = service_.setObserve(new EventInfo{fd, std::bind(handler_, std::ref(client_pool_[fd]))}, EPOLL_FLAGS);
     
     #ifdef DEBUG
-    std::clog << "Connected: " 
+    std::clog << "Connected: "
               << fd 
               << std::endl;
     #endif
@@ -153,8 +153,9 @@ void HttpServer::makeConnection() {
 void HttpServer::deleteConnection(EventInfo* socket) {
     std::lock_guard<std::mutex> lock(mutex_);
  
+    int fd = socket->fd;
     this->service_.delObserve(socket);
-    client_pool_.erase(socket->fd);    
+    client_pool_.erase(fd);
 
     #ifdef DEBUG
     std::clog << "Still connected client: " 
