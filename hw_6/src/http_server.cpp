@@ -17,13 +17,23 @@ CallBack defaultHanlder = [] (Client& client_and_data) {
     auto& [client, package] = client_and_data; 
     std::string buffer;
     try {
-        client >> package;
+        client >> buffer;
     } catch (std::system_error& err) {
-        if (err.code().value() == EAGAIN) { 
-            Coro::yield();
-            client << package;
-        } else {
+        if (err.code().value() != EAGAIN) { 
             std::throw_with_nested(err);
+        }
+        try {
+            HttpPacket pack(buffer);
+            Coro::yield();
+            std::string res = pack.toString();
+            client << res;
+        } catch (...) {
+            HttpPacket error;
+            error.makeResponse("1.1", Http::Code::BAD_REQUEST);
+            error["Server"] = "This Server";
+            std::string res = error.toString();
+            client << res;
+            return;
         }
     }
 };

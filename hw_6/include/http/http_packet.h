@@ -30,6 +30,7 @@ class HttpHeader {
         HttpHeader(const std::string& head);
 
         virtual std::string toString();
+        virtual void toString(std::string& head);
         void makeRequest(const std::string& method,
                          const std::string& uri,
                          const std::string& version);
@@ -37,6 +38,9 @@ class HttpHeader {
         void insert(const Field& header);        
         std::string& operator[](const std::string& field_name);
         void erase(const std::string& field_name);
+    
+        HttpHeader& operator>>(std::string& head);
+        HttpHeader& operator<<(const std::string& head);
 
     private:
         RequestLine  request_line_;
@@ -57,8 +61,11 @@ class HttpPacket : public HttpHeader {
         ~HttpPacket() = default;
 
         HttpPacket(const std::string& packet);
+        HttpPacket& operator<<(const std::string& packet);
+        HttpPacket& operator>>(std::string& packet);
 
         std::string toString() override;
+        void toString(std::string& packet) override;
 
         void setBody(std::string&& body);
         void setBody(const std::string& body);

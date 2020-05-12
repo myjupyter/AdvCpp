@@ -93,6 +93,25 @@ std::string HttpHeader::toString() {
     return http_head;
 }
 
+void HttpHeader::toString(std::string& head) {
+    if (response_line_.has_value()) {
+        auto& code = response_line_.value();
+        head = "HTTP/" + version_ + " " + std::to_string(static_cast<int>(code)) + \
+               " " + CodeMessage[code]; 
+    } else if (request_line_.has_value()) {
+        auto& [method, uri] = request_line_.value();
+        head = method + " " + uri + " " + "HTTP/" + version_;
+    } else {
+        throw Exceptions::HttpPacketBadPacket("Bad formed Http packet");
+    }
+    
+    head += HEADER_END;
+
+    std::for_each(headers_.begin(), headers_.end(), [&head](auto& field) {
+        head += field.first + ": " + field.second + HEADER_END;        
+    });
+}
+
 void HttpHeader::makeRequest(const std::string& method,
                              const std::string& uri,
                              const std::string& version) {
@@ -121,6 +140,15 @@ void HttpHeader::erase(const std::string& field_name) {
     headers_.erase(field_name);
 }
 
+HttpHeader& HttpHeader::operator<<(const std::string& head) {
+    *this = std::move(HttpPacket(head));
+    return *this;
+}
+
+HttpHeader& HttpHeader::operator>>(std::string& head) {
+    toString(head);
+    return *this;
+}
 
 // HttpPacket
 HttpPacket::HttpPacket(const std::string& packet)
@@ -151,5 +179,21 @@ std::string HttpPacket::toString() {
     return HttpHeader::toString() + HEADER_END + body_;
 }
 
+void HttpPacket::toString(std::string& packet) {
+    HttpHeader::toString(packet);
+    if (!body_.empty()) {
+        packet += HEADER_END + body_;    
+    }
+}
+
+HttpPacket& HttpPacket::operator>>(std::string& header) {
+    toString(header);
+    return *this;
+}
+
+HttpPacket& HttpPacket::operator<<(const std::string& header) {
+    *this = std::move(HttpPacket(header));
+    return *this;
+}
 
 }; // namespace Network::Http
