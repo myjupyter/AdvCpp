@@ -55,6 +55,7 @@ void ConnectionTcp::connect(const IpAddress& addr) {
         throw std::runtime_error("ConnectionTcp::connect:" + std::string(err.what()));
     }
 }
+
 void ConnectionTcp::setTimeout(std::chrono::seconds time, Timeout type) {
     if (Timeout::READ == type) {
         SocketManager::setTimeout(getSocket(), SO_RCVTIMEO, time);

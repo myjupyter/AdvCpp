@@ -1,9 +1,7 @@
 #include "coro.h"
-#include <cerrno>
 
+#include <cerrno>
 #include <cstring>
-#include <iostream>
-#include <thread>
 
 namespace Network::Coro {
 

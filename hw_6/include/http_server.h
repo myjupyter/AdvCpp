@@ -23,14 +23,13 @@ using Client     = std::pair<ClientTcp, BytePackage>;
 using ClientPool = std::unordered_map<int, Client>;
 using CallBack   = std::function<void(Client&)>;
 
-
 class HttpServer : NonCopyable {
     public:
         HttpServer() = delete;
         explicit HttpServer(const IpAddress& address, CallBack handler);
         ~HttpServer() = default;
 
-        void work();
+        void work(std::size_t worker_count);
         void stop();
 
         void setHandler(std::function<void(Client&)>);
@@ -44,8 +43,7 @@ class HttpServer : NonCopyable {
         Server server_;
         ClientPool client_pool_;
         BaseService service_;
-        CallBack handler_;
-                
+        CallBack handler_;        
 };
 
 }   // namespace Network::HttpServers 

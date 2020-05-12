@@ -24,6 +24,10 @@ class ServerTcp : public Socket {
 
         void setMaxConnections(uint16_t count);
 
+        const IpAddress& getInfo() const {
+            return server_addr_;
+        }
+
     private:
         IpAddress server_addr_;
         uint16_t max_connections_;

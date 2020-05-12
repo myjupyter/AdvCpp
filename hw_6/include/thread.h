@@ -8,25 +8,25 @@
 #include "non_copyable.h"
 #include "base_service.h"
 
-namespace Network::Thread {
+#include <iostream>
 
+namespace Network::Thread {
 
 class Thread {
     public:
-        Thread(std::size_t max_e, std::function<void(Services::Events&)> func) 
-            : events_(max_e)
-            , thread_(func, std::ref(events_)) {}
+        Thread(std::function<void()> func) 
+            : thread_(func) {}
 
         Thread(Thread&& t) 
-            : events_(std::move(t.events_))
-            , thread_(std::move(t.thread_)) {}
+            : thread_(std::move(t.thread_)) {}
 
         Thread& operator=(Thread&& t) {
             if (this == &t) {
                 return *this;
             }
-            events_ = std::move(t.events_);
             thread_ = std::move(t.thread_);
+            
+            return *this;
         } 
         
         void join() {
@@ -40,7 +40,6 @@ class Thread {
         ~Thread() = default;
 
     private:
-        Services::Events events_;
         std::thread thread_;
 };
 
@@ -48,10 +47,10 @@ using Threads = std::vector<Thread>;
 
 class ThreadPool {
     public: 
-        ThreadPool(std::size_t thread_count, std::size_t max_e,
-                   std::function<void(Services::Events&)> func) {
+        ThreadPool(std::size_t thread_count,
+                   std::function<void()> func) {
             for (int i = 0; i < thread_count; i++) {
-                threads_.emplace_back(max_e, func);
+                threads_.push_back(std::move(Thread(func)));
             }
         }
 
