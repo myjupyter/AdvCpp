@@ -7,6 +7,8 @@
 #include "thread.h"
 #include "global_log_func.h"
 
+#include "resource_manager.h"
+
 constexpr int EPOLL_FLAGS = EPOLLIN | EPOLLET | EPOLLONESHOT;
 constexpr int MAX_CONNECTION = 0xffff;
 
@@ -168,6 +170,14 @@ HttpPacket HttpServer::onRequest(const HttpPacket& request) {
         response.setBody("This was GET: " + uri);       
         std::string req = request.toString();
         Log::debug(req);
+
+        ResourceManager::ResourceManager res_man;
+        std::string body = res_man.getResource(uri);
+        if (body.empty()) {
+            response.setBody("404 Not Found");
+        }
+        response.setBody(std::move(body));
+
     } else if (method == Http::Method::PUT) { 
         response.setBody("This was PUT");        
     } else if (method == Http::Method::POST) {

@@ -46,3 +46,9 @@ add_executable(threads.out ${EXM_DIR}/threads.cpp)
 target_link_libraries(threads.out PUBLIC ${LIB_NAME}
                                          Threads::Threads)
 target_include_directories(threads.out PUBLIC ${LIB_DIR})
+
+# ==================== Threads  ======================= #
+add_executable(res.out ${EXM_DIR}/resource.cpp)
+target_link_libraries(res.out PUBLIC ${LIB_NAME}
+                                     Threads::Threads)
+target_include_directories(res.out PUBLIC ${LIB_DIR})

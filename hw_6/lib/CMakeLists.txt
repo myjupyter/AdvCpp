@@ -30,4 +30,5 @@ target_include_directories(${LIB_NAME} PUBLIC ${INC_DIR}
                                               ${INC_DIR}/exceptions
                                               ${INC_DIR}/coro
                                               ${INC_DIR}/log
+                                              ${INC_DIR}/resource
                                               )
