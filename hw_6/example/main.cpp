@@ -14,15 +14,11 @@ using namespace std::chrono_literals;
 int main() {
     Log::Logger& log = Log::Logger::getInstance();
     log.setGlobalLogger(Log::create_stderr_logger());
-    try {
-        HttpServer server({"127.0.0.1", 8080}, nullptr);
 
-        std::thread sig([&server]() {
-            std::this_thread::sleep_for(5s); 
-            server.stop();       
-        });  
+    try {
+        HttpServer server({"127.0.0.1", 8080});
+
         server.work(4);
-        sig.join();
 
     } catch (std::runtime_error& err) {
         std::cout << err.what() << std::endl;

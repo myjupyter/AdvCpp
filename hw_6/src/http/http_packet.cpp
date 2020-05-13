@@ -12,7 +12,7 @@
 std::string HEADER_END = "\r\n";
 std::string EMPTY_STRING = "\r\n\r\n";
 
-const std::regex correct_request("(GET|POST|PUT|DELETE|HEAD|CONNECT|OPTIONS|PATCH)( )+(/|\\w)+( )+HTTP/\\d\\.\\d");
+const std::regex correct_request("(GET|POST|PUT|DELETE|HEAD|CONNECT|OPTIONS|PATCH)( )+(/|\\w|\\.)+( )+HTTP/\\d\\.\\d");
 const std::regex correct_response("HTTP/\\d.\\d( )+\\d{3}( )?( |\\w?)+");
 
 namespace Network::Http {
@@ -20,7 +20,7 @@ namespace Network::Http {
 // HttpHeader
 HttpHeader::HttpHeader(const std::string& head) {
     if (head.empty()) {
-        throw Exceptions::HttpPacketBadPacket("Empty packet WTF mate?");
+        throw Exceptions::HttpPacketBadPacket("Empty HTTP packet");
     }
     
     std::stringstream input(head);
@@ -49,7 +49,7 @@ HttpHeader::HttpHeader(const std::string& head) {
         version_ = std::move(std::string(start->begin() + start->find("/") + 1, start->end()));
         response_line_ = static_cast<Code>(std::stoi(*(++start)));
     } else {
-        throw Exceptions::HttpPacketBadPacket("Invalid first line of packet");
+        throw Exceptions::HttpPacketBadPacket("Invalid the first line of HTTP packet: " + r_line);
     }
 
     while (std::getline(input, r_line)) {
@@ -71,7 +71,7 @@ HttpHeader::HttpHeader(const std::string& head) {
     }
 }
 
-std::string HttpHeader::toString() {
+std::string HttpHeader::toString() const {
     std::string http_head("");
     if (response_line_.has_value()) {
         auto& code = response_line_.value();
@@ -93,7 +93,7 @@ std::string HttpHeader::toString() {
     return http_head;
 }
 
-void HttpHeader::toString(std::string& head) {
+void HttpHeader::toString(std::string& head) const {
     if (response_line_.has_value()) {
         auto& code = response_line_.value();
         head = "HTTP/" + version_ + " " + std::to_string(static_cast<int>(code)) + \
@@ -128,6 +128,24 @@ void HttpHeader::makeResponse(const std::string& version, Code code) {
     response_line_ = code;
 }
 
+std::string HttpHeader::getVersion() const {
+    return version_;
+}
+
+std::tuple<std::string, std::string> HttpHeader::getRequestLine() const {
+    if (request_line_.has_value()) {
+        return request_line_.value();
+    }
+    return std::make_tuple(std::string(), std::string());
+} 
+
+Code HttpHeader::getResponseLine() const {
+    if (response_line_.has_value()) {
+        return response_line_.value();
+    }
+    return Code::BAD_CODE;
+}
+
 void HttpHeader::insert(const Field& header) {
     headers_.insert(header);
 }
@@ -156,30 +174,33 @@ HttpPacket::HttpPacket(const std::string& packet)
     , body_("") {
     auto pos = packet.find(EMPTY_STRING);
     if (pos != std::string::npos) {
-        body_ = std::move(std::string(packet.begin() + pos, packet.end()));
+        body_ = std::move(std::string(packet.begin() + pos + EMPTY_STRING.size(), packet.end()));
     }
+    (*this)["Content-Length"] = std::to_string(body_.size());
 }
         
 void HttpPacket::setBody(std::string&& body) {
     body_ = std::move(body);
+    (*this)["Content-Length"] = std::to_string(body_.size());
 }
 
 void HttpPacket::setBody(const std::string& body) {
     body_ = body;
+    (*this)["Content-Length"] = std::to_string(body_.size());
 }
         
 std::string& HttpPacket::getBody() {
     return body_;
 }
 
-std::string HttpPacket::toString() {
+std::string HttpPacket::toString() const {
     if (body_.empty()) {
         return HttpHeader::toString();
     }
     return HttpHeader::toString() + HEADER_END + body_;
 }
 
-void HttpPacket::toString(std::string& packet) {
+void HttpPacket::toString(std::string& packet) const {
     HttpHeader::toString(packet);
     if (!body_.empty()) {
         packet += HEADER_END + body_;    

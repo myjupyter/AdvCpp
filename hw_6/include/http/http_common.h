@@ -27,6 +27,7 @@ namespace Method {
 } // namesapce Method
 
 enum class Code {
+    BAD_CODE                           = 0,
     // Informational
     CONTINUE                           = 100,
     SWITCHING_PROTOCOL                 = 101,

@@ -26,7 +26,7 @@ using CallBack     = std::function<void(Client&)>;
 class HttpServer : NonCopyable {
     public:
         HttpServer() = delete;
-        explicit HttpServer(const IpAddress& address, CallBack handler);
+        explicit HttpServer(const IpAddress& address, CallBack handler = nullptr);
         ~HttpServer() = default;
 
         void work(std::size_t worker_count);

@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "client_tcp_ecxep.h"
+#include "http_packet_excep.h"
 #include "thread.h"
 #include "global_log_func.h"
 
@@ -13,35 +14,10 @@ using namespace std::chrono_literals;
 
 namespace Network::Services {
 
-CallBack defaultHanlder = [] (Client& client_and_data) {
-    auto& [client, package] = client_and_data; 
-    std::string buffer;
-    try {
-        client >> buffer;
-    } catch (std::system_error& err) {
-        if (err.code().value() != EAGAIN) { 
-            std::throw_with_nested(err);
-        }
-        try {
-            HttpPacket pack(buffer);
-            Coro::yield();
-            std::string res = pack.toString();
-            client << res;
-        } catch (...) {
-            HttpPacket error;
-            error.makeResponse("1.1", Http::Code::BAD_REQUEST);
-            error["Server"] = "This Server";
-            std::string res = error.toString();
-            client << res;
-            return;
-        }
-    }
-};
-
 HttpServer::HttpServer(const IpAddress& address, CallBack handler) 
     : server_(std::make_unique<ServerTcp>(address))
     , service_{}
-    , handler_(defaultHanlder) {
+    , handler_(handler) {
         server_->setBlocking(false);
         server_->setMaxConnections(MAX_CONNECTION);
         server_->listen();
@@ -51,6 +27,39 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
 
         event_pool_.insert({ei->fd, EventInfoPtr(ei)});  
         service_.setObserve(ei, EPOLL_FLAGS);
+
+        if (handler_ != nullptr) {
+            return;
+        } 
+
+        handler_ = [this] (Client& client_and_data) {
+            auto& [client, package] = client_and_data; 
+            std::string buffer;
+            try {
+                client >> buffer;
+            } catch (std::system_error& err) {
+                if (err.code().value() != EAGAIN) { 
+                    std::throw_with_nested(err);
+                }
+                try {
+                    HttpPacket pack(buffer);
+                    HttpPacket res = onRequest(pack);
+
+                    std::string str_res = res.toString();
+                    client << str_res;
+                } catch (Exceptions::HttpPacketBadPacket& err) {
+                    Log::info(err.what());
+
+                    HttpPacket error;
+                    error.makeResponse("1.1", Http::Code::BAD_REQUEST);
+                    error["Server"] = "This Server";
+                    error.setBody("400 Bad Request");
+
+                    std::string str_error = error.toString();
+                    client << str_error;
+                }
+            }
+        };
 }
 
 void HttpServer::work(std::size_t worker_count) {
@@ -112,6 +121,7 @@ void HttpServer::makeConnection(EventInfo* socket) {
         auto info = new_client.getInfo();
         Log::debug("New connection {" + std::to_string(event_pool_.size() - 1) + "} from " + info.getIp() + ":" + std::to_string(info.getPort()));
     }
+    ei->rout.resume();
     try {
         service_.setObserve(ei, EPOLL_FLAGS);
         service_.modObserve(socket, EPOLL_FLAGS);
@@ -149,7 +159,24 @@ void HttpServer::setHandler(CallBack handler) {
 }
 
 HttpPacket HttpServer::onRequest(const HttpPacket& request) {
-    return HttpPacket();
+    auto [method, uri] = request.getRequestLine();
+    
+    HttpPacket response;
+    response.makeResponse("1.1", Code::NOT_FOUND);
+    
+    if (method == Http::Method::GET) {
+        response.setBody("This was GET: " + uri);       
+        std::string req = request.toString();
+        Log::debug(req);
+    } else if (method == Http::Method::PUT) { 
+        response.setBody("This was PUT");        
+    } else if (method == Http::Method::POST) {
+        response.setBody("This was POST");        
+    } else if (method == Http::Method::DELETE) {
+        response.setBody("This was DELETE");
+    }
+
+    return response;
 }    
 
 }  // namespace Network::HttpServers
