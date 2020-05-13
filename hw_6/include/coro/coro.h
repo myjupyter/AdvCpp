@@ -7,6 +7,8 @@
 
 #include "non_copyable.h"
 
+#include <iostream>
+
 static constexpr std::size_t ROUTINE_STACK_SIZE = 1 << 20;
 
 namespace Network::Coro {
@@ -23,7 +25,7 @@ class Routine : public NonCopyable {
         Routine(RoutineFunc&& routine);
         Routine(Routine&& routine);
         Routine& operator=(Routine&& routine);
-        ~Routine() = default;
+        ~Routine();
 
         bool resume();
 

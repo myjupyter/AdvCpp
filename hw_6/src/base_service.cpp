@@ -63,7 +63,6 @@ void BaseService::delObserve(EventInfo* socket) {
                                 "BaseService::delObserve");
 
     }
-    delete socket;
 }
 
 }   // namespace Network::Services 

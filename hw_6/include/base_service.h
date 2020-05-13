@@ -12,8 +12,11 @@
 
 #include "non_copyable.h"
 #include "coro.h"
+#include "client_tcp.h"
 
 namespace Network::Services {
+
+using Client = std::pair<ClientTcp, BytePackage>;
 
 struct EventInfo {
     EventInfo() = default;
@@ -23,6 +26,7 @@ struct EventInfo {
 
     int fd = -1;
     Coro::Routine rout;
+    Client client;
 };
 
 struct Event {

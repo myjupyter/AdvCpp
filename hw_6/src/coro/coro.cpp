@@ -66,6 +66,10 @@ Routine::Routine(Routine&& routine) {
     routine.routine_ctx_ = {};
 }
 
+Routine::~Routine() {
+    routine_ctx_ = {};
+}
+
 Routine& Routine::operator=(Routine&& routine) {
     if (this == &routine) {
         return *this;

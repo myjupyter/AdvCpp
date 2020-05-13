@@ -1,7 +1,7 @@
 #ifndef HTTP_SERVER_H_
 #define HTTP_SERVER_H_
 
-#include <unordered_map>
+#include <map>
 #include <memory>
 #include <functional>
 #include <utility>
@@ -18,10 +18,10 @@ using namespace Network::Http;
 
 namespace Network::Services {
 
-using Server     = std::unique_ptr<ServerTcp>;
-using Client     = std::pair<ClientTcp, BytePackage>;
-using ClientPool = std::unordered_map<int, Client>;
-using CallBack   = std::function<void(Client&)>;
+using EventInfoPtr = std::unique_ptr<EventInfo>;
+using Server       = std::unique_ptr<ServerTcp>;
+using EventPool    = std::map<int, EventInfoPtr>;
+using CallBack     = std::function<void(Client&)>;
 
 class HttpServer : NonCopyable {
     public:
@@ -34,14 +34,15 @@ class HttpServer : NonCopyable {
 
         void setHandler(std::function<void(Client&)>);
     
-        virtual HttpPacket onRequest(const HttpPacket& request);        
+        virtual HttpPacket onRequest(const HttpPacket& request); 
+
     private:
-        void makeConnection();
+        void makeConnection(EventInfo* socket);
         void deleteConnection(EventInfo* socket);
 
         std::mutex mutex_;
         Server server_;
-        ClientPool client_pool_;
+        EventPool event_pool_;
         BaseService service_;
         CallBack handler_;        
 };
