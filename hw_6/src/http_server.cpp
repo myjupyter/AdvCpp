@@ -36,18 +36,19 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
 
         handler_ = [this] (Client& client_and_data) {
             auto& [client, package] = client_and_data; 
-            std::string buffer;
             try {
-                client >> buffer;
+                client >> package;
             } catch (std::system_error& err) {
                 if (err.code().value() != EAGAIN) { 
                     std::throw_with_nested(err);
                 }
                 try {
-                    HttpPacket pack(buffer);
+                    Coro::yield();
+
+                    HttpPacket pack(package.toString());
                     HttpPacket res = onRequest(pack);
 
-                    std::string str_res = res.toString();
+                    std::string str_res = std::move(res.toString());
                     client << str_res;
                 } catch (Exceptions::HttpPacketBadPacket& err) {
                     Log::info(err.what());
@@ -60,11 +61,12 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
                     std::string str_error = error.toString();
                     client << str_error;
                 }
+                package.clear();
             }
         };
 }
 
-void HttpServer::work(std::size_t worker_count) {
+void HttpServer::work(std::size_t worker_count, double seconds) {
     std::size_t max_workers = static_cast<std::size_t>(std::thread::hardware_concurrency());
     worker_count = worker_count > max_workers ? max_workers : worker_count;
     
@@ -75,8 +77,25 @@ void HttpServer::work(std::size_t worker_count) {
     auto s_info = server_->getInfo();
     Log::info("Server has been launched on " + s_info.getIp() + " " + std::to_string(s_info.getPort()));
 
+    Thread::Thread timeout_thread([this, seconds] () {
+        while (server_->isOpened()) {
+
+        
+            for (auto event = event_pool_.begin(); event != event_pool_.end(); event++) {
+                auto start = event->second->last_activity;
+                auto end = std::chrono::system_clock::now();
+                
+                std::chrono::duration<double> diff = end - start;
+                if (diff.count() > seconds && server_->getSocket() != event->second->fd) {
+                    deleteConnection(event->second.get());
+                    break;
+                }
+            }
+        }        
+    });
+
     Thread::ThreadPool threads(worker_count, [this] () {
-            Events events(0xff);
+            Events events(4);
             
             while (server_->isOpened()) {
                 int n = service_.wait(events);
@@ -86,31 +105,39 @@ void HttpServer::work(std::size_t worker_count) {
                     auto events = event.getMode();
                     auto& fd = socket->fd;
                     auto& routine = socket->rout;
+                    socket->last_activity = std::chrono::system_clock::now();
 
                     if (fd == server_->getSocket()) {
                         makeConnection(socket);
                     } else {
                         try {
                             routine.resume();
-                            service_.modObserve(socket, EPOLL_FLAGS); 
+                            if (routine.is_finished_) {
+                                service_.modObserve(socket, EPOLL_FLAGS); 
+                            } else {
+                                service_.modObserve(socket, EPOLL_FLAGS | EPOLLOUT); 
+                            }
                         } catch (Exceptions::ClientDisconnect& err) {
                             deleteConnection(socket);
                             
-                            Log::debug(err.what());
                         } catch (...) {
                             deleteConnection(socket);
-                            Log::error("Client Disconected. Server processing error!");
+                            Log::error("Server processing error!");
                         }
                     }
             });
         }
     });
+    timeout_thread.join();
 }
 
 void HttpServer::makeConnection(EventInfo* socket) {
     EventInfo* ei = new EventInfo{};
-    ConnectionTcp& new_client = ei->client.first.getCon(); 
-    
+    ConnectionTcp& new_client = ei->client.first.getCon();
+
+    // !! 
+    ei->last_activity = std::chrono::system_clock::now();
+
     server_->accept(new_client);
     new_client.setBlocking(false);
 
@@ -123,7 +150,6 @@ void HttpServer::makeConnection(EventInfo* socket) {
         auto info = new_client.getInfo();
         Log::debug("New connection {" + std::to_string(event_pool_.size() - 1) + "} from " + info.getIp() + ":" + std::to_string(info.getPort()));
     }
-    ei->rout.resume();
     try {
         service_.setObserve(ei, EPOLL_FLAGS);
         service_.modObserve(socket, EPOLL_FLAGS);
@@ -137,6 +163,7 @@ void HttpServer::deleteConnection(EventInfo* socket) {
         this->service_.delObserve(socket);
     } catch (...) {}
     event_pool_.erase(socket->fd);
+    Log::debug("Client disconnected");
 }
 
 void HttpServer::stop() {
@@ -147,7 +174,7 @@ void HttpServer::stop() {
         try {
             EventInfo* ei = con.second.get();
             ei->client.first.getCon().close();
-            
+         
             Log::warning("Forced disconnection");
         } catch (...) {}
 
@@ -164,25 +191,28 @@ HttpPacket HttpServer::onRequest(const HttpPacket& request) {
     auto [method, uri] = request.getRequestLine();
     
     HttpPacket response;
-    response.makeResponse("1.1", Code::NOT_FOUND);
     
     if (method == Http::Method::GET) {
-        response.setBody("This was GET: " + uri);       
         std::string req = request.toString();
         Log::debug(req);
 
-        ResourceManager::ResourceManager res_man;
-        std::string body = res_man.getResource(uri);
+        ResourceManager::ResourceManager& res_man = ResourceManager::ResourceManager::getInstance();
+        std::string body = res_man.getResource(uri, true);
         if (body.empty()) {
+            response.makeResponse("1.1", Code::NOT_FOUND);
             response.setBody("404 Not Found");
         }
+        response.makeResponse("1.1", Code::OK);
         response.setBody(std::move(body));
 
     } else if (method == Http::Method::PUT) { 
+        response.makeResponse("1.1", Code::NOT_FOUND);
         response.setBody("This was PUT");        
     } else if (method == Http::Method::POST) {
+        response.makeResponse("1.1", Code::NOT_FOUND);
         response.setBody("This was POST");        
     } else if (method == Http::Method::DELETE) {
+        response.makeResponse("1.1", Code::NOT_FOUND);
         response.setBody("This was DELETE");
     }
 

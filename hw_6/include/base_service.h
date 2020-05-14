@@ -19,14 +19,25 @@ namespace Network::Services {
 using Client = std::pair<ClientTcp, BytePackage>;
 
 struct EventInfo {
-    EventInfo() = default;
-    EventInfo(int fd) : fd{fd}, rout{} {}
-    EventInfo(int fd, Coro::RoutineFunc&& func) : fd{fd}, rout{std::move(func)} {}
-    ~EventInfo() = default;
+    public:
+        using timer = std::chrono::time_point<std::chrono::system_clock>;
 
-    int fd = -1;
-    Coro::Routine rout;
-    Client client;
+    public:
+        EventInfo() = default;
+        EventInfo(int fd)
+            : fd{fd}, rout{}
+            , last_activity{std::chrono::system_clock::now()} {}
+        EventInfo(int fd, Coro::RoutineFunc&& func) 
+            : fd{fd}, rout{std::move(func)}
+            , last_activity{std::chrono::system_clock::now()} {}
+        ~EventInfo() = default;
+
+        int fd = -1;
+
+        Coro::Routine rout;
+        Client client;
+
+        timer last_activity;
 };
 
 struct Event {

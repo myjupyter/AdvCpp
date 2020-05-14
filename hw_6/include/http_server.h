@@ -29,7 +29,7 @@ class HttpServer : NonCopyable {
         explicit HttpServer(const IpAddress& address, CallBack handler = nullptr);
         ~HttpServer() = default;
 
-        void work(std::size_t worker_count);
+        void work(std::size_t worker_count, double seconds = 10.0);
         void stop();
 
         void setHandler(std::function<void(Client&)>);

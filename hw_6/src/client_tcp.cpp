@@ -33,7 +33,7 @@ bool BytePackage::getline(std::string& data, const std::string& delim) {
         return false;
     }
 
-#ifdef DEBUG
+    #ifdef DEBUG
     std::clog <<"Current: " << current_pos_ << " Delimeter at: "<< new_current << " Data Size: " << data_.size() << std::endl;
     #endif
 
@@ -61,6 +61,15 @@ bool BytePackage::getline(std::string& data, const std::string& delim,
         current_pos_ = new_current + delim.size();
     }
     return true;
+}
+
+std::string BytePackage::toString() const {
+    return std::string(data_.begin() + current_pos_, data_.end());
+}
+
+void BytePackage::clear() {
+    current_pos_ = 0;
+    data_.clear();
 }
 
 bool BytePackage::hasData() const {
