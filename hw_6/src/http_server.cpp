@@ -79,15 +79,14 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
 
     Thread::Thread timeout_thread([this, seconds] () {
         while (server_->isOpened()) {
-
-        
             for (auto event = event_pool_.begin(); event != event_pool_.end(); event++) {
                 auto start = event->second->last_activity;
                 auto end = std::chrono::system_clock::now();
-                
+
                 std::chrono::duration<double> diff = end - start;
                 if (diff.count() > seconds && server_->getSocket() != event->second->fd) {
                     deleteConnection(event->second.get());
+                    Log::debug("Client timeout disconnection");
                     break;
                 }
             }
@@ -119,10 +118,10 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
                             }
                         } catch (Exceptions::ClientDisconnect& err) {
                             deleteConnection(socket);
-                            
+                            Log::debug("Client disconnected");
                         } catch (...) {
                             deleteConnection(socket);
-                            Log::error("Server processing error!");
+                            Log::error("Client disconnected. Server processing error!");
                         }
                     }
             });
@@ -135,7 +134,6 @@ void HttpServer::makeConnection(EventInfo* socket) {
     EventInfo* ei = new EventInfo{};
     ConnectionTcp& new_client = ei->client.first.getCon();
 
-    // !! 
     ei->last_activity = std::chrono::system_clock::now();
 
     server_->accept(new_client);
@@ -163,7 +161,6 @@ void HttpServer::deleteConnection(EventInfo* socket) {
         this->service_.delObserve(socket);
     } catch (...) {}
     event_pool_.erase(socket->fd);
-    Log::debug("Client disconnected");
 }
 
 void HttpServer::stop() {
@@ -198,12 +195,14 @@ HttpPacket HttpServer::onRequest(const HttpPacket& request) {
 
         ResourceManager::ResourceManager& res_man = ResourceManager::ResourceManager::getInstance();
         std::string body = res_man.getResource(uri, true);
+        
         if (body.empty()) {
             response.makeResponse("1.1", Code::NOT_FOUND);
             response.setBody("404 Not Found");
+        } else {
+            response.makeResponse("1.1", Code::OK);
+            response.setBody(std::move(body));
         }
-        response.makeResponse("1.1", Code::OK);
-        response.setBody(std::move(body));
 
     } else if (method == Http::Method::PUT) { 
         response.makeResponse("1.1", Code::NOT_FOUND);
