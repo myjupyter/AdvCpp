@@ -185,35 +185,10 @@ void HttpServer::setHandler(CallBack handler) {
 }
 
 HttpPacket HttpServer::onRequest(const HttpPacket& request) {
-    auto [method, uri] = request.getRequestLine();
+    HttpPacket response;        
     
-    HttpPacket response;
-    
-    if (method == Http::Method::GET) {
-        std::string req = request.toString();
-        Log::debug(req);
-
-        ResourceManager::ResourceManager& res_man = ResourceManager::ResourceManager::getInstance();
-        std::string body = res_man.getResource(uri, true);
-        
-        if (body.empty()) {
-            response.makeResponse("1.1", Code::NOT_FOUND);
-            response.setBody("404 Not Found");
-        } else {
-            response.makeResponse("1.1", Code::OK);
-            response.setBody(std::move(body));
-        }
-
-    } else if (method == Http::Method::PUT) { 
-        response.makeResponse("1.1", Code::NOT_FOUND);
-        response.setBody("This was PUT");        
-    } else if (method == Http::Method::POST) {
-        response.makeResponse("1.1", Code::NOT_FOUND);
-        response.setBody("This was POST");        
-    } else if (method == Http::Method::DELETE) {
-        response.makeResponse("1.1", Code::NOT_FOUND);
-        response.setBody("This was DELETE");
-    }
+    response.makeResponse("1.1", Code::NOT_FOUND);
+    response.setBody("404 Not Found");
 
     return response;
 }    
