@@ -1,7 +1,10 @@
 #include "client_tcp.h"
+
 #include <iostream>
 
-static const int BUFFER_SIZE = 4097;
+#include "client_tcp_ecxep.h"
+
+static const int BUFFER_SIZE = 1 << 16;
 
 namespace Network {
 
@@ -30,7 +33,7 @@ bool BytePackage::getline(std::string& data, const std::string& delim) {
         return false;
     }
 
-#ifdef DEBUG
+    #ifdef DEBUG
     std::clog <<"Current: " << current_pos_ << " Delimeter at: "<< new_current << " Data Size: " << data_.size() << std::endl;
     #endif
 
@@ -60,24 +63,43 @@ bool BytePackage::getline(std::string& data, const std::string& delim,
     return true;
 }
 
+std::string BytePackage::toString() const {
+    return std::string(data_.begin() + current_pos_, data_.end());
+}
+
+void BytePackage::clear() {
+    current_pos_ = 0;
+    data_.clear();
+}
+
 bool BytePackage::hasData() const {
     return current_pos_ < data_.size() - 1;
 }
+
+
 
 // Client Tcp
 
 ClientTcp& ClientTcp::operator>>(std::string& package) {
     std::string buffer(BUFFER_SIZE, '\0');
-    if (connection_.read(buffer.data(), buffer.size() - 1)) {
-        std::copy(buffer.begin(), buffer.end(), std::back_inserter(package));
+    std::size_t bytes = 0;
+    while ((bytes = connection_.read(buffer.data(), buffer.size() - 1)) != 0) {
+        std::copy(buffer.begin(), buffer.begin() + bytes, std::back_inserter(package));
+    }
+    if (bytes == 0) {
+        throw Exceptions::ClientDisconnect("Client Disconnected");
     }
     return *this;
 }
 
 ClientTcp& ClientTcp::operator>>(BytePackage& package) {
     std::string buffer(BUFFER_SIZE, '\0');
-    if (connection_.read(buffer.data(), buffer.size() - 1)) {
+    std::size_t bytes = 0;
+    while ((bytes = connection_.read(buffer.data(), buffer.size() - 1)) != 0) {
         package << buffer;
+    }
+    if (bytes == 0) {
+        throw Exceptions::ClientDisconnect("Client Disconnected");
     }
     return *this;
 }

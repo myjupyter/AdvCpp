@@ -8,29 +8,54 @@
 #include <chrono>
 #include <functional>
 #include <system_error>
+#include <tuple>
 
 #include "non_copyable.h"
+#include "coro.h"
+#include "client_tcp.h"
 
 namespace Network::Services {
 
+using Client = std::pair<ClientTcp, BytePackage>;
+
+struct EventInfo {
+    public:
+        using timer = std::chrono::time_point<std::chrono::system_clock>;
+
+    public:
+        EventInfo() = default;
+        EventInfo(int fd)
+            : fd{fd}, rout{}
+            , last_activity{std::chrono::system_clock::now()} {}
+        EventInfo(int fd, Coro::RoutineFunc&& func) 
+            : fd{fd}, rout{std::move(func)}
+            , last_activity{std::chrono::system_clock::now()} {}
+        ~EventInfo() = default;
+
+        int fd = -1;
+
+        Coro::Routine rout;
+        Client client;
+
+        timer last_activity;
+};
+
 struct Event {
         Event() {
-            event_.data.fd = -1;
+            event_.data.ptr = nullptr;
             event_.events = 0;
         }
-        Event(int socket, uint32_t mode) {
-            event_.data.fd = socket;
-            event_.events = mode;
-        }
+        
         ~Event() = default;
 
-        int getMode() {
+        int getMode() const {
             return event_.events;
         }
 
-        int getFd() {
-            return event_.data.fd;
+        EventInfo* getEventInfo() {
+            return reinterpret_cast<EventInfo*>(event_.data.ptr);
         }
+
 
     public:
         epoll_event event_;
@@ -43,20 +68,17 @@ class BaseService : NonCopyable {
         BaseService(int flags = 0);
         ~BaseService(); 
 
-        int wait();
-        void process(int active_con, std::function<void(Event&)> func);
+        int wait(Events& events);
 
-        void setMaxEvents(std::size_t count);
         void setTimeout(int usec);
         void setTimeout(std::chrono::milliseconds usec);
 
-        void setObserve(int socket, uint32_t mode); 
-        void modObserve(int socket, uint32_t mode);
-        void delObserve(int scoket);
+        EventInfo* setObserve(EventInfo* socket, uint32_t mode); 
+        void modObserve(EventInfo* socket, uint32_t mode);
+        void delObserve(EventInfo* scoket);
 
     private:
         int epoll_fd_;
-        mutable Events events_;
         mutable int timeout_usec_;
 };
 

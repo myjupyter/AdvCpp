@@ -1,14 +1,12 @@
 #!/bin/bash
 
-python3 -c "print('a'*1000000)" > ./message
+python3 -c "print('a'*1_000)" > ./message
 
-../server.out &
-
-for i in $(seq 4024); do 
-    cat message | nc localhost 8080 > /dev/null &
+for i in $(seq 1000); do 
+    cat message | nc localhost 8080 & 
 done
 
-sleep 10
+sleep 10s
 
 pkill nc
 rm ./message

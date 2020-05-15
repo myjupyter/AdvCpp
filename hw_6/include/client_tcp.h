@@ -22,6 +22,8 @@ class BytePackage {
         bool getline(std::string& data, const std::string& delim,
                      std::size_t chunk_size);
 
+        std::string toString() const;
+        void clear();
     private:
         bool hasData() const;
         

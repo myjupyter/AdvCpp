@@ -1,37 +1,24 @@
 #include <iostream>
 #include <cstring>
+#include <thread>
+#include <chrono>
 
-#include "service.h"
+#include "http_server.h"
 #include "http_packet.h"
+#include "global_log_func.h"
 
 using namespace Network;
 using namespace Network::Services;
-
-void func(Client& client_and_data) {
-
-    auto& [client, package] = client_and_data;
-
-    std::string buffer;
-    client >> buffer;
-
-    Http::HttpPacket request(buffer); 
-    std::cout << request.toString() << std::endl << std::endl;
-
-    Http::HttpHeader head;
-    head.makeResponse("1.1", Http::Code::OK);
-    head["Server"]     =  "my_server v0.1";
-    head["Connection"] =  "close";
-
-    std::string res = std::move(head.toString());
-    client << res;        
-}
+using namespace std::chrono_literals;
 
 int main() {
+    Log::Logger& log = Log::Logger::getInstance();
+    log.setGlobalLogger(Log::create_stderr_logger());
+
     try {
-        Service service(IpAddress("127.0.0.1", 8080));
-    
-        service.setHandler(func);
-        service.work();   
+        HttpServer server({"127.0.0.1", 8080});
+
+        server.work(4, 2.5);
 
     } catch (std::runtime_error& err) {
         std::cout << err.what() << std::endl;

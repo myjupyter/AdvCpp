@@ -5,19 +5,19 @@ namespace Network {
 ConnectionTcp::ConnectionTcp()
     : RWSocket(Socket::SockType::TCP)
     , dest_addr_(IpAddress()) {
-    SocketManager::setOption(getSocket(), SO_REUSEADDR);    
+    SocketManager::setOption(getSocket(), SO_REUSEADDR | SO_REUSEPORT);    
 }
 
 ConnectionTcp::ConnectionTcp(const IpAddress& addr)
     : RWSocket(Socket::SockType::TCP)
     , dest_addr_(addr) {
-    SocketManager::setOption(getSocket(), SO_REUSEADDR);    
+    SocketManager::setOption(getSocket(), SO_REUSEADDR | SO_REUSEPORT);    
 }
 
 ConnectionTcp::ConnectionTcp(int socket, const IpAddress& addr) 
     : RWSocket(socket)
     , dest_addr_(addr) {
-    SocketManager::setOption(getSocket(), SO_REUSEADDR);
+    SocketManager::setOption(getSocket(), SO_REUSEADDR | SO_REUSEPORT);
     setSocketStatus(Socket::OK);
 }
 
@@ -55,6 +55,7 @@ void ConnectionTcp::connect(const IpAddress& addr) {
         throw std::runtime_error("ConnectionTcp::connect:" + std::string(err.what()));
     }
 }
+
 void ConnectionTcp::setTimeout(std::chrono::seconds time, Timeout type) {
     if (Timeout::READ == type) {
         SocketManager::setTimeout(getSocket(), SO_RCVTIMEO, time);
