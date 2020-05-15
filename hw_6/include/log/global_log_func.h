@@ -9,7 +9,6 @@
 #include "file_logger.h"
 #include "logger.h"
 
-
 namespace Network::Log {
 
     using LogPtr = std::unique_ptr<BaseLogger>;

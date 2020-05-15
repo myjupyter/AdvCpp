@@ -14,10 +14,12 @@ set(EXM_DIR ${PRJ_DIR}/example)
 
 set(LIB_NAME   Network)
 set(SERVER_OUT server.out)
+set(MYHTTP_OUT myhttp.out)
 
 add_subdirectory(${LIB_DIR})
 
 set(SERVER_SRCS ${EXM_DIR}/main.cpp)
+set(MYHTTP_SRCS ${EXM_DIR}/src/main.cpp)
 
 # =============== Includes threading for test ============= #
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -29,7 +31,14 @@ target_link_libraries(${SERVER_OUT} PUBLIC ${LIB_NAME}
                                            Threads::Threads)
 target_include_directories(${SERVER_OUT} PUBLIC ${LIB_DIR} )
 
-# ==================== Http Packet  ======================= #
+# =============== MyHttp Example ========================== #
+add_executable(${MYHTTP_OUT} ${MYHTTP_SRCS})
+target_link_libraries(${MYHTTP_OUT} PUBLIC ${LIB_NAME}
+                                           Threads::Threads)
+target_include_directories(${MYHTTP_OUT} PUBLIC ${LIB_DIR} 
+                                                ${EXM_DIR}/include)
+
+# ==================== Coro  ======================= #
 add_executable(coro.out ${EXM_DIR}/coro_test.cpp)
 target_link_libraries(coro.out PUBLIC ${LIB_NAME}
                                       Threads::Threads)
@@ -47,7 +56,7 @@ target_link_libraries(threads.out PUBLIC ${LIB_NAME}
                                          Threads::Threads)
 target_include_directories(threads.out PUBLIC ${LIB_DIR})
 
-# ==================== Threads  ======================= #
+# ==================== Resource Manager  ======================= #
 add_executable(res.out ${EXM_DIR}/resource.cpp)
 target_link_libraries(res.out PUBLIC ${LIB_NAME}
                                      Threads::Threads)
