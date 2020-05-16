@@ -57,7 +57,7 @@ void RWSocket::writeExact(const void* data, std::size_t size) {
 }
 
 std::size_t RWSocket::read(void* data, std::size_t size) {
-    if(!isOpened()) {
+    if (!isOpened()) {
         return 0;
     } 
 
@@ -88,6 +88,19 @@ void RWSocket::readExact(void* data, std::size_t size) {
                     "/" + std::to_string(size) + " bytes were recieved");
         }
     }
+}
+
+ssize_t RWSocket::read_non_block(void* data, std::size_t size) {
+    if (!isOpened()) {
+        return 0;
+    }
+
+    ssize_t bytes = ::read(getSocket(), data, size);
+    if (bytes == -1 && !IS_NONBLOCK_ERRNO(errno)) {
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
+                                "RWSocket::read_non_block");
+    }
+    return bytes;
 }
 
 

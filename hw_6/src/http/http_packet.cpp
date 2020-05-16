@@ -175,8 +175,8 @@ HttpPacket::HttpPacket(const std::string& packet)
     auto pos = packet.find(EMPTY_STRING);
     if (pos != std::string::npos) {
         body_ = std::move(std::string(packet.begin() + pos + EMPTY_STRING.size(), packet.end()));
+        (*this)["Content-Length"] = std::to_string(body_.size());
     }
-    (*this)["Content-Length"] = std::to_string(body_.size());
 }
         
 void HttpPacket::setBody(std::string&& body) {
@@ -189,7 +189,7 @@ void HttpPacket::setBody(const std::string& body) {
     (*this)["Content-Length"] = std::to_string(body_.size());
 }
         
-std::string& HttpPacket::getBody() {
+const std::string& HttpPacket::getBody() const {
     return body_;
 }
 
@@ -215,6 +215,14 @@ HttpPacket& HttpPacket::operator>>(std::string& header) {
 HttpPacket& HttpPacket::operator<<(const std::string& header) {
     *this = std::move(HttpPacket(header));
     return *this;
+}
+
+std::size_t HttpPacket::getContentLength() {
+    std::string len = (*this)["Content-Length"];
+    if (len.empty()) {
+        return 0;
+    }
+    return static_cast<std::size_t>(std::stoi(len.c_str()));
 }
 
 }; // namespace Network::Http

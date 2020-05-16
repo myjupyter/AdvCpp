@@ -9,8 +9,9 @@
 
 #include "resource_manager.h"
 
-constexpr int EPOLL_FLAGS = EPOLLIN | EPOLLET | EPOLLONESHOT;
-constexpr int MAX_CONNECTION = 0xffff;
+constexpr int EPOLL_FLAGS             = EPOLLIN | EPOLLET | EPOLLONESHOT;
+constexpr int MAX_CONNECTION          = 0xffff;
+constexpr std::size_t MAX_HEADER_SIZE = 0xfff;
 
 using namespace std::chrono_literals;
 
@@ -36,33 +37,84 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
 
         handler_ = [this] (Client& client_and_data) {
             auto& [client, package] = client_and_data; 
-            try {
-                client >> package;
-            } catch (std::system_error& err) {
-                if (err.code().value() != EAGAIN) { 
-                    std::throw_with_nested(err);
-                }
-                try {
+
+            ssize_t bytes = client.async_read(package);
+            
+            std::string buffer;
+            // Читаем, пока не встретим конец заголовка
+            while (!package.getline(buffer, "\r\n\r\n")) {
+                bytes = client.async_read(package);
+                // Если встретили EAGAIN - прерываем рутину
+                // Возобновит её этот или другой поток
+                if (bytes == -1) {
                     Coro::yield();
+                }
+                // Если длина заголовка очень большая, то отклоняем запрос
+                if (package.size() > MAX_HEADER_SIZE) {
+                    package.clear();
 
-                    HttpPacket pack(package.toString());
-                    HttpPacket res = onRequest(pack);
-
-                    std::string str_res = std::move(res.toString());
-                    client << str_res;
-                } catch (Exceptions::HttpPacketBadPacket& err) {
-                    Log::info(err.what());
+                    Log::debug("Too Large Http head");
 
                     HttpPacket error;
-                    error.makeResponse("1.1", Http::Code::BAD_REQUEST);
+                    error.makeResponse("1.1", Http::Code::PAYLOAD_TOO_LARGE);
                     error["Server"] = "This Server";
-                    error.setBody("400 Bad Request");
+                    error.setBody("413 Entity Too Large");
 
                     std::string str_error = error.toString();
                     client << str_error;
+                    return;
                 }
-                package.clear();
             }
+
+            HttpPacket packet;
+            try {
+                // Попытка из полученных данных сформировать пакет
+                packet << buffer;
+                buffer.clear();
+            } catch (Exceptions::HttpPacketBadPacket& err) {
+                package.clear();
+
+                Log::info(err.what());
+                
+                HttpPacket error;
+                error.makeResponse("1.1", Http::Code::BAD_REQUEST);
+                error["Server"] = "This Server";
+                error.setBody("400 Bad Request");
+
+                std::string str_error = error.toString();
+                client << str_error;
+                return;
+            }
+
+            // Если нет контента
+            if (packet.getContentLength() == 0) {
+                HttpPacket res = onRequest(packet);
+
+                std::string str_res = std::move(res.toString());
+                client << str_res;
+                return;
+            }
+
+            // Если есть контент, то догружаем его
+            HttpBody body;
+ 
+            body.addContent(package.getNBytes(packet.getContentLength()));
+            std::size_t diff = packet.getContentLength() - body.size();
+            // Пока не будет считана вся размерность
+            while (diff != 0) {
+                bytes = client.async_read(package);
+                if (bytes == -1) {
+                    Coro::yield();
+                } else {
+                    body.addContent(package.getNBytes(diff));                    
+                }
+                diff = packet.getContentLength() - body.size();
+            }
+            packet.setBody(body.getBody());
+            HttpPacket res = onRequest(packet);
+
+            std::string str_res = std::move(res.toString());
+            client << str_res;
         };
 }
 
@@ -84,15 +136,15 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
                 auto end = std::chrono::system_clock::now();
 
                 std::chrono::duration<double> diff = end - start;
-                if (diff.count() > seconds && server_->getSocket() != event->second->fd) {
-                    deleteConnection(event->second.get());
+                if (diff.count() > seconds && server_->getSocket() != event->second->fd) { 
+                    deleteConnection(event->second.get());                
+                    
                     Log::debug("Client timeout disconnection");
                     break;
                 }
             }
         }        
     });
-
     Thread::ThreadPool threads(worker_count, [this] () {
             Events events(4);
             
@@ -119,6 +171,12 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
                         } catch (Exceptions::ClientDisconnect& err) {
                             deleteConnection(socket);
                             Log::debug("Client disconnected");
+                        } catch (std::system_error& err) {
+                            Log::error(err.what());
+                            deleteConnection(socket);
+                        } catch (std::runtime_error& err) {
+                            Log::error(err.what());
+                            deleteConnection(socket);
                         } catch (...) {
                             deleteConnection(socket);
                             Log::error("Client disconnected. Server processing error!");
@@ -127,7 +185,8 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
             });
         }
     });
-    timeout_thread.join();
+    //timeout_thread.join();
+    
 }
 
 void HttpServer::makeConnection(EventInfo* socket) {

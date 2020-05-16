@@ -22,6 +22,11 @@ class BytePackage {
         bool getline(std::string& data, const std::string& delim,
                      std::size_t chunk_size);
 
+        std::size_t fullSize() const;
+        std::size_t size() const;
+
+        std::string getNBytes(std::size_t);
+
         std::string toString() const;
         void clear();
     private:
@@ -42,6 +47,9 @@ class ClientTcp : NonCopyable {
         ClientTcp& operator<<(std::string& package);
         ClientTcp& operator>>(BytePackage& package);
         ClientTcp& operator<<(BytePackage& package);
+
+        ssize_t async_read(std::string& package);
+        ssize_t async_read(BytePackage& package);
 
         const ConnectionTcp& getCon() const; 
         ConnectionTcp& getCon();

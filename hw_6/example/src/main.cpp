@@ -6,7 +6,7 @@ int main() {
     log.setGlobalLogger(create_stderr_logger());
 
     try {
-        MyHttp server({"127.0.0.1", 8080});
+        MyHttp server({"0.0.0.0", 8081});
 
         server.work(4, 2.5);
 

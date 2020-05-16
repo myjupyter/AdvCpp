@@ -35,9 +35,10 @@ class MyHttp : public HttpServer {
                     response.setBody(std::move(body));
                 }
 
-            } else if (method == Method::PUT) { 
-                response.makeResponse("1.1", Code::NOT_FOUND);
-                response.setBody("This was PUT");        
+            } else if (method == Method::PUT) {
+                response.makeResponse("1.1", Code::OK);
+                std::string buffer = request.getBody();
+                response.setBody(buffer);
             } else if (method == Method::POST) {
                 response.makeResponse("1.1", Code::NOT_FOUND);
                 response.setBody("This was POST");        

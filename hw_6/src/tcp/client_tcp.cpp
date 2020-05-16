@@ -33,10 +33,6 @@ bool BytePackage::getline(std::string& data, const std::string& delim) {
         return false;
     }
 
-    #ifdef DEBUG
-    std::clog <<"Current: " << current_pos_ << " Delimeter at: "<< new_current << " Data Size: " << data_.size() << std::endl;
-    #endif
-
     data = std::move(std::string(data_.begin() + current_pos_, data_.begin() + new_current));
     current_pos_ = new_current + delim.size();
     return true;
@@ -61,6 +57,21 @@ bool BytePackage::getline(std::string& data, const std::string& delim,
         current_pos_ = new_current + delim.size();
     }
     return true;
+}
+
+std::size_t BytePackage::fullSize() const {
+    return data_.size();
+}
+
+std::size_t BytePackage::size() const {
+    return data_.size() - current_pos_;
+}
+
+std::string BytePackage::getNBytes(std::size_t n) {
+    auto real_size = size() < n ? size() : n;
+    std::string data(data_.begin() + current_pos_, data_.begin() + current_pos_ + real_size);
+    current_pos_ += real_size;
+    return data;
 }
 
 std::string BytePackage::toString() const {
@@ -121,6 +132,30 @@ const ConnectionTcp& ClientTcp::getCon() const {
 
 ConnectionTcp& ClientTcp::getCon() {
     return connection_;
+}
+
+ssize_t ClientTcp::async_read(std::string& package) {
+    std::string buffer(BUFFER_SIZE, '\0');
+    ssize_t bytes = 0;
+    
+    if ((bytes = connection_.read_non_block(buffer.data(), buffer.size() - 1)) == 0) {
+        throw Exceptions::ClientDisconnect("Client Disconnected");
+    } else if (bytes != -1) {
+        std::copy(buffer.begin(), buffer.begin() + bytes, std::back_inserter(package));
+    }
+    return bytes;
+}
+
+ssize_t ClientTcp::async_read(BytePackage& package) {
+    std::string buffer(BUFFER_SIZE, '\0');
+    ssize_t bytes = 0;
+
+    if ((bytes = connection_.read_non_block(buffer.data(), buffer.size() - 1)) == 0) {
+        throw Exceptions::ClientDisconnect("Client Disconnected");
+    } else if (bytes != -1) {
+        package << buffer;
+    }
+    return bytes;
 }
 
 }  // namespace Network

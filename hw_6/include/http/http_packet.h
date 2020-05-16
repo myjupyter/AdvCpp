@@ -55,6 +55,39 @@ class HttpHeader {
         Fields headers_;
 };
 
+class HttpBody {
+    public:
+        HttpBody() = default;
+        ~HttpBody() = default;
+
+        void addContent(const std::string& data) {
+            std::copy(data.begin(), data.end(), std::back_inserter(body_));
+        }
+
+        void setBody(const std::string& data) {
+            body_ = data;
+        }
+
+        void setBody(std::string&& data) {
+            body_ = std::move(data);
+        }
+
+        std::size_t getContentLength() const {
+            return body_.size();
+        }
+
+        std::string& getBody() {
+            return body_;
+        }
+
+        std::size_t size() {
+            return body_.size();
+        }
+
+    private:
+        std::string body_;
+};
+
 class HttpPacket : public HttpHeader {
     public:
         HttpPacket() = default;
@@ -71,9 +104,11 @@ class HttpPacket : public HttpHeader {
         std::string toString() const override;
         void toString(std::string& packet) const override;
 
+        std::size_t getContentLength();
+
         void setBody(std::string&& body);
         void setBody(const std::string& body);
-        std::string& getBody();
+        const std::string& getBody() const;
 
     private:
         std::string body_;
