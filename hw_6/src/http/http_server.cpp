@@ -143,20 +143,24 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
     Log::info("Server has been launched on " + s_info.getIp() + " " + std::to_string(s_info.getPort()));
 
     Thread::Thread timeout_thread([this, seconds] () {
-        while (server_->isOpened()) {
+        while (server_->isOpened()) {  
             for (auto event = event_pool_.begin(); event != event_pool_.end(); event++) {
+                auto& routine = event->second->rout;
+                auto fd = event->second->fd;
                 auto start = event->second->last_activity;
+                
                 auto end = std::chrono::system_clock::now();
 
                 std::chrono::duration<double> diff = end - start;
-                if (diff.count() > seconds && server_->getSocket() != event->second->fd) { 
-                    deleteConnection(event->second.get());                
+                if (diff.count() > seconds &&  server_->getSocket() != fd && !routine.isWorking()) { 
                     
+                    deleteConnection(event->second.get());    
+
                     Log::debug("Client timeout disconnection");
                     break;
                 }
             }
-        }        
+         }       
     });
     Thread::ThreadPool threads(worker_count, [this] () {
             Events events(4);
@@ -176,7 +180,7 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
                     } else {
                         try {
                             routine.resume();
-                            if (routine.is_finished_) {
+                            if (routine.isFinished()) {
                                 service_.modObserve(socket, EPOLL_FLAGS); 
                             } else {
                                 service_.modObserve(socket, EPOLL_FLAGS | EPOLLOUT); 
@@ -230,7 +234,7 @@ void HttpServer::deleteConnection(EventInfo* socket) {
     std::lock_guard<std::mutex> lock(mutex_);
  
     try {
-        this->service_.delObserve(socket);
+        service_.delObserve(socket);
     } catch (...) {}
     event_pool_.erase(socket->fd);
 }

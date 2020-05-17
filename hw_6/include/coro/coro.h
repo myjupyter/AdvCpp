@@ -19,6 +19,8 @@ using RoutineFunc = std::function<void()>;
 void yield();
 void entry();
 
+struct Ordinator;
+
 class Routine : public NonCopyable {
     public:
         Routine();
@@ -31,7 +33,11 @@ class Routine : public NonCopyable {
 
         void reset(RoutineFunc&& routine);
         void again();
-    public:
+
+        bool isFinished() const;
+        bool isWorking() const;
+
+    private:
         bool is_finished_;
         bool is_working_;
 
@@ -40,6 +46,10 @@ class Routine : public NonCopyable {
         
         RoutineFunc routine_;
         std::exception_ptr exception_;
+
+        friend struct Ordinator;
+        friend void entry();
+        friend void yield();
 };
 
 

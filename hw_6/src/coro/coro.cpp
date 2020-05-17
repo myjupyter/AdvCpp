@@ -134,4 +134,13 @@ void Routine::again() {
     ::makecontext(&routine_ctx_, entry, 0);
 }
 
+bool Routine::isFinished() const {
+    return is_finished_;
+}
+
+bool Routine::isWorking() const {
+    return is_working_;
+}
+
+
 }  // Network::Coro
