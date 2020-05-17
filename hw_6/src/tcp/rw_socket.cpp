@@ -103,5 +103,17 @@ ssize_t RWSocket::read_non_block(void* data, std::size_t size) {
     return bytes;
 }
 
+ssize_t RWSocket::write_non_block(const void* data, std::size_t size) {
+    if (!isOpened()) {
+        return 0;
+    }
+
+    ssize_t bytes = ::send(getSocket(), data, size, MSG_NOSIGNAL);
+    if (bytes == -1 && !IS_NONBLOCK_ERRNO(errno)) {
+        throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
+                                "RWSocket::write_non_block");
+    }
+    return bytes;
+}
 
 }

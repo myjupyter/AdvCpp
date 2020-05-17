@@ -11,7 +11,7 @@ namespace Network {
 // BytePackage
 
 BytePackage& BytePackage::operator<<(const std::string& data) {
-    std::copy(data.begin(), data.end(), std::back_inserter(data_));            
+    std::copy(data.begin(), data.begin() + std::strlen(data.data()), std::back_inserter(data_));            
     return *this;
 }
 
@@ -65,6 +65,14 @@ std::size_t BytePackage::fullSize() const {
 
 std::size_t BytePackage::size() const {
     return data_.size() - current_pos_;
+}
+
+const char* BytePackage::fullData() const {
+    return data_.data();
+}
+
+const char* BytePackage::data() const {
+    return data_.data() + current_pos_;
 }
 
 std::string BytePackage::getNBytes(std::size_t n) {
@@ -156,6 +164,18 @@ ssize_t ClientTcp::async_read(BytePackage& package) {
         package << buffer;
     }
     return bytes;
+}
+
+ssize_t ClientTcp::async_write(BytePackage& package) {
+    ssize_t bytes = connection_.write_non_block(package.data(), package.size());
+    if (bytes != -1) {
+        package.current_pos_ += bytes;
+    }
+    return bytes;
+}
+
+ssize_t ClientTcp::async_write(const void* data, std::size_t size) {
+    return connection_.write_non_block(data, size);
 }
 
 }  // namespace Network

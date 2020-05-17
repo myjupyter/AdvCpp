@@ -19,8 +19,8 @@ class RWSocket : public Socket {
         std::size_t read(void* data, std::size_t size);
         void readExact(void* data, std::size_t size);
     
-       ssize_t read_non_block(void* data, std::size_t size);
-
+        ssize_t read_non_block(void* data, std::size_t size);
+        ssize_t write_non_block(const void* data, std::size_t size);
 
     protected:
         explicit RWSocket(int socket);

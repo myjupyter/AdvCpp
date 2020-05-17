@@ -51,10 +51,10 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
                 }
                 // Если длина заголовка очень большая, то отклоняем запрос
                 if (package.size() > MAX_HEADER_SIZE) {
+                    Log::debug("Too Large Http head {" + std::to_string(package.size()) + "}");
+                    
                     package.clear();
-
-                    Log::debug("Too Large Http head");
-
+                    
                     HttpPacket error;
                     error.makeResponse("1.1", Http::Code::PAYLOAD_TOO_LARGE);
                     error["Server"] = "This Server";
@@ -72,8 +72,6 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
                 packet << buffer;
                 buffer.clear();
             } catch (Exceptions::HttpPacketBadPacket& err) {
-                package.clear();
-
                 Log::info(err.what());
                 
                 HttpPacket error;
@@ -85,36 +83,51 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
                 client << str_error;
                 return;
             }
+ 
+            // Если есть контент, то догружаем его
+            if (packet.getContentLength() != 0) {
+                HttpBody body;
 
-            // Если нет контента
-            if (packet.getContentLength() == 0) {
-                HttpPacket res = onRequest(packet);
+                body.addContent(package.getNBytes(packet.getContentLength()));
+                std::size_t diff = packet.getContentLength() - body.size();
+                // Пока не будет считана вся размерность
+                while (diff != 0) {
+                    bytes = client.async_read(package);
+                    if (bytes == -1) {
+                        Coro::yield();
+                    } else {
+                        body.addContent(package.getNBytes(diff));                    
+                    }
+                    diff = packet.getContentLength() - body.size();
+                }
 
-                std::string str_res = std::move(res.toString());
-                client << str_res;
-                return;
+                packet.setBody(body.getBody());
             }
 
-            // Если есть контент, то догружаем его
-            HttpBody body;
- 
-            body.addContent(package.getNBytes(packet.getContentLength()));
-            std::size_t diff = packet.getContentLength() - body.size();
-            // Пока не будет считана вся размерность
-            while (diff != 0) {
-                bytes = client.async_read(package);
+            // Ответ на запрос 
+            // И посылка данных
+            HttpPacket res = onRequest(packet);
+            std::string str_res;
+            res.toString(str_res);
+            
+            // Процесс отправки данных
+            std::size_t rest = 0, old_rest;
+            std::size_t size = str_res.size();
+            while(rest != size) {
+                old_rest = rest;
+                
+                ssize_t bytes = client.async_write(static_cast<const char*>(str_res.data()) + rest, size - rest);
+                // Словили EAGAIN - прерываем рутину
+                // Её продолжит этот или уже друой поток
                 if (bytes == -1) {
                     Coro::yield();
+                } else if (bytes == 0) {
+                    throw std::runtime_error("HttpServer::handler: " + std::to_string(rest) + \
+                            "/" + std::to_string(size) + " bytes were sent");
                 } else {
-                    body.addContent(package.getNBytes(diff));                    
+                    rest += bytes;
                 }
-                diff = packet.getContentLength() - body.size();
             }
-            packet.setBody(body.getBody());
-            HttpPacket res = onRequest(packet);
-
-            std::string str_res = std::move(res.toString());
-            client << str_res;
         };
 }
 

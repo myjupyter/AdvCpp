@@ -11,6 +11,8 @@
 
 namespace Network {
 
+class ClientTcp;
+
 class BytePackage {
     public:
         BytePackage() = default;
@@ -24,8 +26,11 @@ class BytePackage {
 
         std::size_t fullSize() const;
         std::size_t size() const;
+        
+        const char* fullData() const;
+        const char* data() const;
 
-        std::string getNBytes(std::size_t);
+        std::string getNBytes(std::size_t n);
 
         std::string toString() const;
         void clear();
@@ -34,6 +39,8 @@ class BytePackage {
         
         std::string data_;
         std::size_t current_pos_ = 0;
+
+        friend class ClientTcp;
 };
 
 class ClientTcp : NonCopyable {
@@ -50,6 +57,8 @@ class ClientTcp : NonCopyable {
 
         ssize_t async_read(std::string& package);
         ssize_t async_read(BytePackage& package);
+        ssize_t async_write(const void* data, std::size_t size);
+        ssize_t async_write(BytePackage& package);
 
         const ConnectionTcp& getCon() const; 
         ConnectionTcp& getCon();
