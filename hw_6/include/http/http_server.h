@@ -38,6 +38,7 @@ class HttpServer : NonCopyable {
     private:
         void makeConnection(EventInfo* socket);
         void deleteConnection(EventInfo* socket);
+        void deleteByTimeout(double seconds);
 
         std::mutex mutex_;
         Server server_;

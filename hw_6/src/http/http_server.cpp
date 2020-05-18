@@ -141,33 +141,14 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
 
     auto s_info = server_->getInfo();
     Log::info("Server has been launched on " + s_info.getIp() + " " + std::to_string(s_info.getPort()));
-
-    Thread::Thread timeout_thread([this, seconds] () {
-        while (server_->isOpened()) {  
-            for (auto event = event_pool_.begin(); event != event_pool_.end(); event++) {
-                auto& routine = event->second->rout;
-                auto fd = event->second->fd;
-                auto start = event->second->last_activity;
-                
-                auto end = std::chrono::system_clock::now();
-
-                std::chrono::duration<double> diff = end - start;
-                if (diff.count() > seconds &&  server_->getSocket() != fd && !routine.isWorking()) { 
-                    
-                    deleteConnection(event->second.get());    
-
-                    Log::debug("Client timeout disconnection");
-                    break;
-                }
-            }
-         }       
-    });
-    Thread::ThreadPool threads(worker_count, [this] () {
+    
+    Thread::ThreadPool threads(worker_count, [this, seconds] () {
             Events events(4);
             
             while (server_->isOpened()) {
+                deleteByTimeout(seconds);
+                
                 int n = service_.wait(events);
-
                 std::for_each_n(events.begin(), n, [this] (Event& event) {
                     EventInfo* socket = event.getEventInfo();
                     auto events = event.getMode();
@@ -201,9 +182,7 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
                     }
             });
         }
-    });
-    //timeout_thread.join();
-    
+    }); 
 }
 
 void HttpServer::makeConnection(EventInfo* socket) {
@@ -237,6 +216,31 @@ void HttpServer::deleteConnection(EventInfo* socket) {
         service_.delObserve(socket);
     } catch (...) {}
     event_pool_.erase(socket->fd);
+}
+
+void HttpServer::deleteByTimeout(double seconds) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    for (auto event = event_pool_.begin(); event != event_pool_.end();) {
+        auto& routine = event->second->rout;
+        auto fd = event->second->fd;
+        auto start = event->second->last_activity;
+                
+        auto end = std::chrono::system_clock::now();
+
+        std::chrono::duration<double> diff = end - start;
+        if (diff.count() > seconds &&  server_->getSocket() != fd && !routine.isWorking()) { 
+
+            try {
+                service_.delObserve(event->second.get());
+            } catch (...) {}
+            event = event_pool_.erase(event);
+
+            Log::debug("Client timeout disconnection");
+        } else {
+            ++event;
+        }
+    }
 }
 
 void HttpServer::stop() {
