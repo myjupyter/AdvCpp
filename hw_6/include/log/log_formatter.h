@@ -6,10 +6,10 @@
 #include <ostream>
 #include <unordered_map>
 
-#define DEBUG_STR   "D "
-#define INFO_STR    "I "
-#define WARNING_STR "W "
-#define ERROR_STR   "E "
+#define DEBUG_STR   " DEBUG  "
+#define INFO_STR    " INFO   "
+#define WARNING_STR "WARNING "
+#define ERROR_STR   " ERROR  "
 
 namespace Network::Log {
 

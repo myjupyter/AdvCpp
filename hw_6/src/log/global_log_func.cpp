@@ -42,6 +42,13 @@ void error(const std::string& msg) {
     }
 }
 
+void set_level(Level level) {
+    auto& logger = Logger::getInstance().getGlobalLogger();
+    if (logger) {
+        logger->set_level(level);
+    }
+}
+
 }  // namespace Log
 
 

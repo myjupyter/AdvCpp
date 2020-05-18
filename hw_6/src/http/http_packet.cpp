@@ -154,6 +154,13 @@ std::string& HttpHeader::operator[](const std::string& field_name) {
     return headers_[field_name];
 }
 
+std::string HttpHeader::getField(const std::string& field_name) const {
+    try {
+        return headers_.at(field_name);
+    } catch (std::out_of_range& err) {}
+    return std::string();
+}
+
 void HttpHeader::erase(const std::string& field_name) {
     headers_.erase(field_name);
 }
@@ -217,8 +224,8 @@ HttpPacket& HttpPacket::operator<<(const std::string& header) {
     return *this;
 }
 
-std::size_t HttpPacket::getContentLength() {
-    std::string len = (*this)["Content-Length"];
+std::size_t HttpPacket::getContentLength() const {
+    std::string len = getField("Content-Length");
     if (len.empty()) {
         return 0;
     }

@@ -37,6 +37,7 @@ class HttpHeader {
         void makeResponse(const std::string& version, Code code);
         void insert(const Field& header);        
         std::string& operator[](const std::string& field_name);
+        std::string getField(const std::string& field_name) const;
         void erase(const std::string& field_name);
 
         std::string getVersion() const;
@@ -104,7 +105,7 @@ class HttpPacket : public HttpHeader {
         std::string toString() const override;
         void toString(std::string& packet) const override;
 
-        std::size_t getContentLength();
+        std::size_t getContentLength() const;
 
         void setBody(std::string&& body);
         void setBody(const std::string& body);

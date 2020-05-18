@@ -83,7 +83,12 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
                 client << str_error;
                 return;
             }
- 
+
+            // Адреc клиента
+            if (packet["X-Forwarded-For"].empty()) {
+                packet["X-Forwarded-For"] = client.getCon().getInfo().getIp();
+            }
+
             // Если есть контент, то догружаем его
             if (packet.getContentLength() != 0) {
                 HttpBody body;
@@ -198,11 +203,11 @@ void HttpServer::makeConnection(EventInfo* socket) {
     ei->rout.reset(std::bind(handler_, std::ref(ei->client)));
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        event_pool_.insert({ei->fd, EventInfoPtr(ei)});
-    
-        auto info = new_client.getInfo();
-        Log::debug("New connection {" + std::to_string(event_pool_.size() - 1) + "} from " + info.getIp() + ":" + std::to_string(info.getPort()));
+        event_pool_.insert({ei->fd, EventInfoPtr(ei)}); 
     }
+    auto info = new_client.getInfo();
+    Log::debug("New connection {" + std::to_string(event_pool_.size() - 1) + "} from " + info.getIp() + ":" + std::to_string(info.getPort()));
+   
     try {
         service_.setObserve(ei, EPOLL_FLAGS);
         service_.modObserve(socket, EPOLL_FLAGS);
@@ -247,17 +252,19 @@ void HttpServer::stop() {
     std::lock_guard<std::mutex> lock(mutex_);
     auto node = event_pool_.extract(server_->getSocket());
     
+    server_->close();
     std::for_each(event_pool_.begin(), event_pool_.end(), [this] (auto& con) {
         try {
             EventInfo* ei = con.second.get();
-            ei->client.first.getCon().close();
-         
-            Log::warning("Forced disconnection");
+            service_.delObserve(ei);
+
+            ei->client.first.getCon().close(); 
         } catch (...) {}
 
     });
-    server_->close();
     event_pool_.clear();
+
+    Log::debug("Server has been stoped");
 }
 
 void HttpServer::setHandler(CallBack handler) {

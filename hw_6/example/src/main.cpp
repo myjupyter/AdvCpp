@@ -5,6 +5,8 @@ int main() {
     Logger& log = Logger::getInstance();
     log.setGlobalLogger(create_stderr_logger());
 
+    set_level(Level::Info);
+
     try {
         MyHttp server({"0.0.0.0", 8081});
 

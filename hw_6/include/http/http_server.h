@@ -1,5 +1,5 @@
-#ifndef HTTP_SERVER_H_
-#define HTTP_SERVER_H_
+#ifndef HTTP_HTTP_SERVER_H_
+#define HTTP_HTTP_SERVER_H_
 
 #include <map>
 #include <memory>
@@ -47,6 +47,6 @@ class HttpServer : NonCopyable {
         CallBack handler_;        
 };
 
-}   // namespace Network::HttpServers 
+}   // namespace Network::Http
 
-#endif  // HTTP_SERVER_H_
+#endif  // HTTP_HTTP_SERVER_H_

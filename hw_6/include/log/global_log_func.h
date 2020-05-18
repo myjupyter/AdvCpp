@@ -22,6 +22,8 @@ namespace Network::Log {
     void warning(const std::string& msg);
     void error(const std::string& msg);
 
+    void set_level(Level level);
+
 }  // namespace Network::Log
 
 #endif // LOG_GLOBAL_LOG_FUNC_H_
