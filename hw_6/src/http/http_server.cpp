@@ -151,6 +151,7 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
             Events events(4);
             
             while (server_->isOpened()) {
+
                 deleteByTimeout(seconds);
                 
                 int n = service_.wait(events);
@@ -224,7 +225,9 @@ void HttpServer::deleteConnection(EventInfo* socket) {
 }
 
 void HttpServer::deleteByTimeout(double seconds) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    if (mutex_.try_lock() == false) {
+        return;
+    }
 
     for (auto event = event_pool_.begin(); event != event_pool_.end();) {
         auto& routine = event->second->rout;
@@ -246,6 +249,7 @@ void HttpServer::deleteByTimeout(double seconds) {
             ++event;
         }
     }
+    mutex_.unlock();
 }
 
 void HttpServer::stop() {
