@@ -7,10 +7,11 @@
 #include <utility>
 #include <mutex>
 
+#include "signal.h"
+
 #include "server_tcp.h"
 #include "client_tcp.h"
 #include "base_service.h"
-
 #include "http_packet.h"
 
 using namespace Network::Http;
@@ -26,7 +27,7 @@ class HttpServer : NonCopyable {
     public:
         HttpServer() = delete;
         explicit HttpServer(const IpAddress& address, CallBack handler = nullptr);
-        ~HttpServer() = default;
+        ~HttpServer();
 
         void work(std::size_t worker_count, double seconds = 10.0);
         void stop();
@@ -45,6 +46,18 @@ class HttpServer : NonCopyable {
         EventPool event_pool_;
         BaseService service_;
         CallBack handler_;        
+    
+    public:
+        static bool signal_flag;
+};
+
+bool HttpServer::signal_flag = false;
+
+void signalHandler(int signal) {
+    if (signal == SIGTERM ||
+        signal == SIGINT) {
+        HttpServer::signal_flag = true;        
+    }
 };
 
 }   // namespace Network::Http

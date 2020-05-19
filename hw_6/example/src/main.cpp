@@ -14,7 +14,8 @@ int main() {
     set_level(Level::Info);
 
     try {
-        MyHttp server({"0.0.0.0", 8081});
+        MyHttp server({Config::Configurator::get<std::string>("MyHttp", "ip"),
+                       Config::Configurator::get<uint16_t>("MyHttp", "port")});
 
         server.work(Config::Configurator::get<int>("MyHttp", "threads"),
                     Config::Configurator::get<double>("MyHttp", "timeout"));

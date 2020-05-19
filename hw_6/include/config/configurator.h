@@ -6,7 +6,6 @@
 #include <string>
 #include <stdexcept>
 #include <regex>
-#include <iostream>
 
 const std::regex regex_key_value("( )*(.+?)( )*=( )*(.+?)+( )*");
 const std::regex regex_section("\\[(\\w)+\\]");
@@ -69,23 +68,21 @@ class Configurator {
             }
 
             std::string current_section;
-            for (std::string line; std::getline(config_file_, line, '\n');) {
-                if (line.empty()) {
+            for (std::string line("empty"); std::getline(config_file_, line, '\n');) {
+                if (line.empty() || std::strlen(line.c_str()) == 0) {
                     continue;
                 }
+                
+                line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
 
-                std::size_t pos = line.find_first_not_of(" ");
-                std::size_t pos2 = line.find_last_not_of(" ");
-                line = std::string(line.begin() + pos, line.begin() + pos2 + 1);
-    
-                pos = line.find('#');
-                pos2 = line.find(';');
+                std::size_t pos = line.find('#');
+                std::size_t pos2 = line.find(';');
                 pos = pos < pos2 ? pos : pos2;
                 if (pos != std::string::npos) {
                     line = std::string(line.begin(), line.begin() + pos);
                 }
 
-                if (line.empty()) {
+                if (line.empty() || std::strlen(line.c_str()) == 0) {
                     continue;
                 }
 

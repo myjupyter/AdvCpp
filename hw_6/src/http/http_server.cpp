@@ -6,8 +6,8 @@
 #include "http_packet_excep.h"
 #include "thread.h"
 #include "global_log_func.h"
-
 #include "resource_manager.h"
+#include "configurator.h"
 
 constexpr int EPOLL_FLAGS             = EPOLLIN | EPOLLET | EPOLLONESHOT;
 constexpr int MAX_CONNECTION          = 0xffff;
@@ -21,10 +21,15 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
     : server_(std::make_unique<ServerTcp>(address))
     , service_{}
     , handler_(handler) {
+
+        signal(SIGTERM, signalHandler);
+        signal(SIGINT, signalHandler);
+
+
         server_->setBlocking(false);
         server_->setMaxConnections(MAX_CONNECTION);
         server_->listen();
-        service_.setTimeout(100);
+        service_.setTimeout(Config::Configurator::get<int>("Base", "epoll_timeout"));
         
         EventInfo* ei = new EventInfo{server_->getSocket()};
 
@@ -57,7 +62,7 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
                     
                     HttpPacket error;
                     error.makeResponse("1.1", Http::Code::PAYLOAD_TOO_LARGE);
-                    error["Server"] = "This Server";
+                    error["Server"] = Config::Configurator::get<std::string>("Base", "server_name");
                     error.setBody("413 Entity Too Large");
 
                     std::string str_error = error.toString();
@@ -136,6 +141,17 @@ HttpServer::HttpServer(const IpAddress& address, CallBack handler)
         };
 }
 
+HttpServer::~HttpServer() {
+    std::for_each(event_pool_.begin(), event_pool_.end(), [this] (auto& con) {
+        try {
+            service_.delObserve(con.second.get());
+        } catch (...) {}
+
+    });
+    event_pool_.clear();
+    Log::info("Server stopped absolutely");
+}
+
 void HttpServer::work(std::size_t worker_count, double seconds) {
     std::size_t max_workers = static_cast<std::size_t>(std::thread::hardware_concurrency());
     worker_count = worker_count > max_workers ? max_workers : worker_count;
@@ -148,9 +164,9 @@ void HttpServer::work(std::size_t worker_count, double seconds) {
     Log::info("Server has been launched on " + s_info.getIp() + " " + std::to_string(s_info.getPort()));
     
     Thread::ThreadPool threads(worker_count, [this, seconds] () {
-            Events events(4);
+            Events events(Config::Configurator::get<int>("Base", "events"));
             
-            while (server_->isOpened()) {
+            while (server_->isOpened() && !signal_flag) {
 
                 deleteByTimeout(seconds);
                 
