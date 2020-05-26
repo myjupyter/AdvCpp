@@ -12,7 +12,7 @@ struct Data {
 };
 
 
-constexpr int SIZE = 10;
+constexpr int SIZE = 101;
 
 int main() {
     
@@ -42,20 +42,14 @@ int main() {
         }
     }
 
-
-    IndexFile<uint64_t, uint64_t> file(File{"./index"}, MappedFile::in, MappedFile::shared);
-    BinaryFile data_file("./data");
-
+    LargeData<uint64_t, Data> file("./index", "./data");
 
     std::srand(std::time(nullptr));
-    for (int i = 0 ; i < 10; i++) {
+    for (int i = 0 ; i < SIZE; i++) {
         int num = std::rand() % SIZE;
         uint64_t key = std::hash<std::string>{}(std::to_string(num));
-        
-        Data data;
-        data_file.readAt(file.table_[key], &data, sizeof(Data));
 
-        std::cout << num << " " << data.payload << std::endl;
+        std::cout << num << " " << file[key].payload << std::endl;
     }
 
     return 0;
