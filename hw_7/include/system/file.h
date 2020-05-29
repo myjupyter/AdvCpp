@@ -15,6 +15,7 @@
 #include <unordered_map>
 
 #include <iostream>
+#include <mutex>
 
 #include "file_cont.h"
 #include "non_copyable.h"
@@ -35,17 +36,17 @@ class File : Network::NonCopyable {
             , name_(file.name_)
             , info_(file.info_) {
             file.fd_ = -1;
-            ::memset(&file.info_, '\0', sizeof(struct stat));
+            file.info_ = {};
         }
 
         File& operator=(File&& file) {
             if (this != &file) {
                 fd_ = file.fd_;
                 name_ = std::move(file.name_);
-                ::memcpy(&info_, &file.info_, sizeof(struct stat));
+                file.info_ = info_;
 
                 file.fd_ = -1;
-                ::memset(&file.info_, '\0', sizeof(struct stat));
+                file.info_ = {};
             }
             return *this;
         }
@@ -94,7 +95,7 @@ class File : Network::NonCopyable {
                 ::close(fd_);
                 
                 fd_ = -1;
-                ::memset(&info_, '\0', sizeof(struct stat)); 
+                info_ = {};
              }
         }
 
@@ -133,7 +134,11 @@ class DataStorage {
     public:
         explicit DataStorage(const std::string& path)
             : data_(path, O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
-            , name_(path) {}
+            , name_(path) {
+                std::size_t elem_count = data_.getSize() / sizeof(Pair);
+                FVector vec(elem_count, Allocator<Pair>(data_.getFd()));
+                vec_data_ = std::move(vec);
+            }
 
         void sort(std::size_t chunk_size = ::sysconf(_SC_PAGESIZE) * 100000 / 4) {
             std::vector<FVector> fvectors;
@@ -183,6 +188,7 @@ class DataStorage {
 
             }
 
+            vec_data_ = std::move(vec);
             data_.deleteFile();
             data_ = std::move(result);
             data_.renameFile(name_);
@@ -205,14 +211,12 @@ class DataStorage {
                 vec_i[i].key    = vec[i * pair_per_page].key;
                 vec_i[i].offset = i * pair_per_page * sizeof(Pair);
             }
+
             index_ = std::move(vec_i);
         }
 
         bool isSorted() {
-            std::size_t elem_count = data_.getSize() / sizeof(Pair);
-            FVector vec(elem_count, Allocator<Pair>(data_.getFd()));
-
-            return std::is_sorted(vec.begin(), vec.end(), [] (const Pair& x, const Pair& y) -> bool {
+            return std::is_sorted(vec_data_.begin(), vec_data_.end(), [] (const Pair& x, const Pair& y) -> bool {
                 return x.key < y.key;        
             });
         }
@@ -226,15 +230,16 @@ class DataStorage {
             
             File index(index_path, O_RDWR, mode);
             IVector vec_i(index_count,  Allocator<Index>(index.getFd()));
-       
-            index_ = std::move(vec_i);
+        
+            index_      = std::move(vec_i);
             index_file_ = std::move(index);
         }
 
         std::optional<Data> search(uint64_t hash_key) {
             Index ind;
             ind.key = hash_key;
-            
+           
+
             auto it = std::upper_bound(index_.begin(), index_.end(), ind, [](const Index& x, const Index& y) -> bool {
                 return x.key < y.key;
             });
@@ -247,21 +252,23 @@ class DataStorage {
             }
 
             std::size_t elem_count = data_.getSize() / sizeof(Pair);
+
+
             std::size_t pair_per_page = ::sysconf(_SC_PAGESIZE) / sizeof(Pair);
             std::size_t offset = (--it)->offset;
             std::size_t rest =  elem_count - (offset / sizeof(Pair));
+            std::size_t elem_offset = offset / sizeof(Pair);
             std::size_t elem = rest < pair_per_page ? rest : pair_per_page;
-
-
-            FVector vec(elem, Allocator<Pair>(data_.getFd(), offset));
 
             Pair p;
             p.key = hash_key;
-            auto elem_it = std::lower_bound(vec.begin(), vec.end(), p, [](const Pair& x, const Pair& y) -> bool {   
-                return x.key < y.key;   
+            auto vec_it = vec_data_.begin() + elem_offset;
+
+            auto elem_it = std::lower_bound(vec_it, vec_it + elem, p, [](const Pair& x, const Pair& y) -> bool {   
+                    return x.key < y.key;
             });
 
-            if (elem_it == std::end(vec) || elem_it->key != hash_key) { 
+            if (elem_it == std::end(vec_data_) || elem_it->key != hash_key) { 
                 return {};
             }
 
@@ -273,7 +280,9 @@ class DataStorage {
         IVector index_;
 
         std::string name_;
+
         File data_;
+        FVector vec_data_;
 };
 
 #endif  // SYSTEM_FILE_H_

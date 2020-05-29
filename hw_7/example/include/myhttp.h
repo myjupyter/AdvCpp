@@ -1,6 +1,7 @@
 #ifndef EXAMPLE_MYHTTP_H_
 #define EXAMPLE_MYHTTP_H_
 
+#include <time.h>
 #include "http_server.h"
 #include "global_log_func.h"
 #include "resource_manager.h"
@@ -17,7 +18,8 @@ static std::string access_log(const HttpPacket& request, const HttpPacket& respo
     auto code          = response.getResponseLine();
 
     std::time_t t = std::time(nullptr);
-    std::tm tm = *std::localtime(&t);
+    std::tm tm;
+    localtime_r(&t, &tm);
 
     std::string len = std::to_string(response.getContentLength());
     std::stringstream log_message;
@@ -48,8 +50,8 @@ class MyHttp : public HttpServer {
 
             HttpPacket response;
 
-            if (handler_map_.contains(method)) {
-                response = handler_map_[method](request);
+            if (auto it = handler_map_.find(method); it != std::end(handler_map_)) {
+                response = it->second(request);
             } else {
                 response.makeResponse("1.1", Code::NOT_FOUND);
                 response.setBody("404 Not Found"); 

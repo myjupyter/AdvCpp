@@ -7,7 +7,7 @@
 #include "generator.h"
 
 
-constexpr std::size_t COUNT = 10000000;
+constexpr std::size_t COUNT = 600000000;
 
 int main() {
     std::string file("./data/text.dat");
@@ -16,7 +16,7 @@ int main() {
 
     DataStorage storage(file);
     if (!storage.isSorted()) {
-        storage.sort();
+        storage.sort(::sysconf(_SC_PAGESIZE) / 4 * 1000000);
     }
     if (!storage.isSorted()) {
         std::cout << "Still not sorted" << std::endl;
@@ -25,7 +25,7 @@ int main() {
 
 
     std::srand(std::time(nullptr));
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 1000000; ++i) {
 
         std::size_t j = ::rand() % COUNT;
         auto val = storage.search(std::hash<std::string>{}(std::to_string(j)));
