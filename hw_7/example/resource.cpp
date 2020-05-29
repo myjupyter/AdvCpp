@@ -4,53 +4,36 @@
 #include <ctime>
 
 #include "file.h"
-
-using Key = std::pair<uint64_t, uint64_t>;
-
-struct Data {
-    uint8_t payload[20] = {};
-};
+#include "generator.h"
 
 
-constexpr int SIZE = 101;
+constexpr std::size_t COUNT = 1000;
 
 int main() {
-    
-    // write indexies
-    {
-        BinaryFile file("./index", File::out);
+    std::string file("./data/text.dat");
 
-        for (int i = 0; i < SIZE; i++) {
-            std::string s = std::to_string(i);
+    //generateKeyDataFile(file, COUNT);
 
-            Key ko = std::make_pair(std::hash<std::string>{}(s), sizeof(Data) * i);
-            file.write(&ko, sizeof(Key));
-        }
+    DataStorage storage(file);
+    if (!storage.isSorted()) {
+        storage.sort();
     }
-
-    // write data
-    {
-        BinaryFile file("./data", File::out);
-
-        for (int i = 0; i < SIZE; i++) {
-            std::string s = std::to_string(i);
-
-            Data data;
-            std::strncpy(reinterpret_cast<char*>(data.payload), s.data(), s.size() > 20 ? 20 : s.size());
-
-            file.write(&data, sizeof(Data));
-        }
-    }
-
-    LargeData<uint64_t, Data> file("./index", "./data");
+    storage.createIndex("./data/index.dat");
 
     std::srand(std::time(nullptr));
-    for (int i = 0 ; i < SIZE; i++) {
-        int num = std::rand() % SIZE;
-        uint64_t key = std::hash<std::string>{}(std::to_string(num));
+    for (int i = 0; i < 1000000; ++i) {
 
-        std::cout << num << " " << file[key].payload << std::endl;
+        std::size_t j = ::rand() % COUNT;
+        auto val = storage.search(std::hash<std::string>{}(std::to_string(j)));
+
+        if (val.has_value()) {
+            std::size_t res = static_cast<std::size_t>(std::stoi(reinterpret_cast<char*>(val.value().payload)));
+            if (j != res) {        
+                std::cout << j << " != " << res << std::endl;
+            }
+        } else {
+            std::cout << "Not found: " << j << std::endl;
+        }
     }
-
     return 0;
 }
