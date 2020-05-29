@@ -261,13 +261,7 @@ class DataStorage {
                 return x.key < y.key;   
             });
 
-            if (elem_it == std::end(vec)) {
-                std::cout << "Lower missed" << std::endl;
-                
-                std::cout << "Tried find " << hash_key << std::endl;
-                std::for_each(vec.begin(), vec.end(), [](const auto& x) {
-                    std::cout << x.key << " ";        
-                });
+            if (elem_it == std::end(vec) || elem_it->key != hash_key) { 
                 return {};
             }
 
