@@ -20,91 +20,131 @@
 #include "file_cont.h"
 #include "non_copyable.h"
 
-class File : Network::NonCopyable {
+class Descriptor : Network::NonCopyable {
     public:
-        explicit File(const std::string& path, int flag, int mode) {
-            fd_ = ::open(path.c_str(), flag, mode);
-            if (fd_ == -1 || fstat(fd_, &info_) == -1) {
+        Descriptor() : desc_{-1} {}
+
+        explicit Descriptor(int desc) {
+            if (desc == -1) {
                 throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
-                                        "File::File");
+                                        "Descriptor::Descriptor");
             }
-            name_ = path;
+            desc_ = desc;
+        } 
+
+        Descriptor(Descriptor&& desc) 
+            : desc_(desc.desc_) {
+            desc.desc_ = -1;
         }
 
-        File(File&& file)
-            : fd_(file.fd_)
-            , name_(file.name_)
-            , info_(file.info_) {
-            file.fd_ = -1;
-            file.info_ = {};
-        }
+        Descriptor& operator=(Descriptor&& desc) {
+            if (this != std::addressof(desc)) {
+                desc_ = desc.desc_;
 
-        File& operator=(File&& file) {
-            if (this != &file) {
-                fd_ = file.fd_;
-                name_ = std::move(file.name_);
-                file.info_ = info_;
-
-                file.fd_ = -1;
-                file.info_ = {};
+                desc.desc_ = -1;
             }
             return *this;
         }
 
-        std::size_t getSize() {
-            if (fstat(fd_, &info_) == -1) {
-                throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
-                                        "File::getSize");
+        int getDesc() const {
+            return desc_;
+        }
+
+        virtual void close() {
+            if (desc_ != -1) {
+                ::close(desc_);
+
+                desc_ = -1;
             }
+        }
+
+        virtual ~Descriptor() {
+            close();
+        }
+
+
+    protected:
+        int desc_;
+};
+
+class FileStat {
+    public:
+        FileStat() : info_{} {}
+
+        explicit FileStat(int fd) {
+            updateInfo(fd);
+        }
+
+        FileStat(const FileStat&) = default;
+        FileStat(FileStat&&) = default;
+        FileStat& operator=(const FileStat&) = default;
+        FileStat& operator=(FileStat&&) = default;
+        ~FileStat() = default;
+
+        std::size_t getSize(int fd) {
+            updateInfo(fd);
             return info_.st_size;
         }
 
-        std::size_t getFd() const {
-            return fd_;
+    private:
+        void updateInfo(int fd) {
+            if (::fstat(fd, &info_) == -1) {
+                throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
+                                        "FileStat::FileStat");
+            }
         }
 
-        
+        struct stat info_;
+};
+
+class File : public Descriptor {
+    public: 
+
+        explicit File(const std::string& name, int flag, int mode)
+            : Descriptor(::open(name.c_str(), flag, mode))
+            , name_(name)
+            , info_() {}
+
+        File() = default;
+        File(File&&) = default;
+        File& operator=(File&&) = default;
+        ~File() = default;
+
         void setFileSize(std::size_t bytes) {
-            if(::ftruncate(fd_, bytes) == -1) {
-                throw std::runtime_error(std::strerror(errno));
+            if(::ftruncate(desc_, bytes) == -1) {
+                throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
+                                        "File::setFileSize");
             }
         }
 
         void deleteFile() {
-            if (fd_ != -1) {
+            if (desc_ != -1) {
                 close();
                 ::remove(name_.c_str());
             }
         }
 
         void renameFile(const std::string& name) {
-            if (fd_ != -1) {
-                if (::rename(name_.c_str(), name.c_str()) == -1) {
-                    throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
-                                            "File::renameFile");
-                }
+            if (::rename(name_.c_str(), name.c_str()) == -1) {
+                throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
+                                        "File::renameFile");
             }
         } 
 
+        int getFd() const {
+            return getDesc();
+        }
+        
         std::string getName() const {
             return name_;
         }
 
-        virtual void close() {
-             if (fd_ != -1) {
-                ::close(fd_);
-                
-                fd_ = -1;
-                info_ = {};
-             }
+        std::size_t getSize() {
+            return info_.getSize(desc_);
         }
 
-        virtual ~File() {
-            close();
-        }
-
-        virtual std::size_t write(const void* data, std::size_t size) {
-            ssize_t bytes = ::write(fd_, data, size);
+        std::size_t write(const void* data, std::size_t size) {
+            ssize_t bytes = ::write(desc_, data, size);
             if (bytes == -1) {
                 throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
                                         "File::write");
@@ -112,23 +152,20 @@ class File : Network::NonCopyable {
             return bytes;
         }
 
-        virtual std::size_t read(void* data, std::size_t size) {
-            ssize_t bytes = ::read(fd_, data, size);
+        std::size_t read(void* data, std::size_t size) {
+            ssize_t bytes = ::read(desc_, data, size);
             if (bytes == -1) {
                 throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)),
                                         "File::read");
             }
             return bytes;
         }
+       
 
-        File() : fd_{-1} {}
-    
-    private:     
-        int fd_;
+    private:
         std::string name_;
-        struct stat info_;
+        FileStat info_;
 };
-
 
 class DataStorage {
     public:

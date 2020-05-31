@@ -7,16 +7,16 @@
 #include "generator.h"
 
 
-constexpr std::size_t COUNT = 600000000;
+constexpr std::size_t COUNT = 6000;
 
 int main() {
-    std::string file("./data/text.dat");
+    std::string file("./data/data.dat");
 
     generateKeyDataFile(file, COUNT);
 
     DataStorage storage(file);
     if (!storage.isSorted()) {
-        storage.sort(::sysconf(_SC_PAGESIZE) / 4 * 1000000);
+        storage.sort(::sysconf(_SC_PAGESIZE) / 4 * 10000);
     }
     if (!storage.isSorted()) {
         std::cout << "Still not sorted" << std::endl;
