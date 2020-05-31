@@ -32,7 +32,6 @@ int main() {
         
             uri.erase(std::remove(uri.begin(), uri.end(), '/'), uri.end());
             
-            std::cout << uri.size() << std::endl;
             auto hash_key = std::hash<std::string>{}(uri);
             auto val = storage.search(hash_key);
             if (val.has_value()) {

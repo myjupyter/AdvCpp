@@ -14,7 +14,6 @@
 #include <functional>
 #include <unordered_map>
 
-#include <iostream>
 #include <mutex>
 
 #include "file_cont.h"
@@ -97,10 +96,12 @@ class FileStat {
         struct stat info_;
 };
 
+constexpr mode_t DEFAULT_FILE_MODE = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+
 class File : public Descriptor {
     public: 
 
-        explicit File(const std::string& name, int flag, int mode)
+        explicit File(const std::string& name, int flag, int mode = DEFAULT_FILE_MODE)
             : Descriptor(::open(name.c_str(), flag, mode))
             , name_(name)
             , info_() {}
@@ -167,52 +168,49 @@ class File : public Descriptor {
         FileStat info_;
 };
 
-class DataStorage {
+class DataStorage : Network::NonCopyable {
     public:
+
+        DataStorage() = delete;
+        ~DataStorage() = default;
+
         explicit DataStorage(const std::string& path)
             : data_(path, O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
             , name_(path) {
-                std::size_t elem_count = data_.getSize() / sizeof(Pair);
-                FVector vec(elem_count, Allocator<Pair>(data_.getFd()));
+                elem_count_ = data_.getSize() / sizeof(Pair);
+                elem_per_page_ = ::sysconf(_SC_PAGESIZE) / sizeof(Pair);
+
+                FVector vec(elem_count_, Allocator<Pair>(data_.getFd()));
                 vec_data_ = std::move(vec);
             }
 
         void sort(std::size_t chunk_size = ::sysconf(_SC_PAGESIZE) * 100000 / 4) {
-            std::vector<FVector> fvectors;
-           
-            mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-
-            std::size_t elem_count = data_.getSize() / sizeof(Pair);
-            std::size_t elem_per_page = chunk_size / sizeof(Pair);
-            std::size_t offsets = elem_count;
+            std::size_t elem_per_chunk = chunk_size / sizeof(Pair);
             
             // Chunk sort
-            for (int offset = 0; offset <= offsets; offset+= elem_per_page) {
-                std::size_t elem = elem_count - offset < elem_per_page ? elem_count - offset : elem_per_page;
-                if (elem == 0) {
+            std::vector<std::pair<Iterator, Iterator>> iterators;
+            for (std::size_t elem = 0; elem <= elem_count_; elem+= elem_per_chunk) {
+                std::size_t rest = elem_count_ - elem < elem_per_chunk ? elem_count_ - elem : elem_per_chunk;
+                if (rest == 0) {
                     break;
                 }
 
-                FVector vec(elem, Allocator<Pair>(data_.getFd(), offset * sizeof(Pair)));
-                std::sort(vec.begin(), vec.end(), [](const Pair x, const Pair& y) -> bool {
+                auto chunk_begin = vec_data_.begin() + elem;
+                auto chunk_end = chunk_begin + rest;
+
+                std::sort(chunk_begin, chunk_end, [](const Pair x, const Pair& y) {
                         return x.key < y.key;
                 });
 
-                fvectors.push_back(std::move(vec));
+                iterators.emplace_back(chunk_begin, chunk_end);
             }
 
-            std::vector<std::pair<Iterator, Iterator>> iterators;
-
-            std::for_each(fvectors.begin(), fvectors.end(), [&iterators] (auto& vec){
-                    iterators.push_back({vec.begin(), vec.end()});
-            });
-
             // Merge Sort
-            File result(name_ + ".bk", O_CREAT | O_TRUNC | O_RDWR, mode);
-            result.setFileSize(elem_count * sizeof(Pair));
-            FVector vec(elem_count,  Allocator<Pair>(result.getFd()));
+            File result(name_ + ".bk", O_CREAT | O_TRUNC | O_RDWR, DEFAULT_FILE_MODE);
+            result.setFileSize(elem_count_ * sizeof(Pair));
+            FVector vec(elem_count_,  Allocator<Pair>(result.getFd()));
 
-            for (std::size_t i = 0; i < elem_count; ++i) {
+            for (std::size_t i = 0; i < elem_count_; ++i) {
                 auto it_to_it = std::min_element(iterators.begin(), iterators.end(), [](const auto& pair_x, const auto& pair_y) -> bool {
                         return pair_x.first->key < pair_y.first->key;
                 });
@@ -222,7 +220,6 @@ class DataStorage {
                 if (it == it_to_it->second) {
                     iterators.erase(it_to_it);
                 }
-
             }
 
             vec_data_ = std::move(vec);
@@ -232,21 +229,17 @@ class DataStorage {
         }
 
         void createIndex(const std::string& index_path) {
-            mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-
-            std::size_t elem_count = data_.getSize() / sizeof(Pair);
-            std::size_t pair_per_page = ::sysconf(_SC_PAGESIZE) / sizeof(Pair);
-            std::size_t index_count = elem_count / pair_per_page + (elem_count % pair_per_page ? 1 : 0);
+            index_count_ = elem_count_ / elem_per_page_ + (elem_count_ % elem_per_page_ ? 1 : 0);
             
-            FVector vec(elem_count, Allocator<Pair>(data_.getFd()));
+            FVector vec(elem_count_, Allocator<Pair>(data_.getFd()));
 
-            File index(index_path, O_CREAT | O_TRUNC | O_RDWR, mode);
-            index.setFileSize(index_count * sizeof(Index));
+            File index(index_path, O_CREAT | O_TRUNC | O_RDWR, DEFAULT_FILE_MODE);
+            index.setFileSize(index_count_ * sizeof(Index));
 
-            IVector vec_i(index_count,  Allocator<Index>(index.getFd()));
-            for (std::size_t i = 0; i < index_count; ++i) {
-                vec_i[i].key    = vec[i * pair_per_page].key;
-                vec_i[i].offset = i * pair_per_page * sizeof(Pair);
+            IVector vec_i(index_count_,  Allocator<Index>(index.getFd()));
+            for (long long i = 0; i < index_count_; ++i) {
+                vec_i[i].key    = vec[i * elem_per_page_].key;
+                vec_i[i].offset = i * elem_per_page_ * sizeof(Pair);
             }
 
             index_ = std::move(vec_i);
@@ -258,25 +251,23 @@ class DataStorage {
             });
         }
 
-        void setIndex(const std::string& index_path) {
-            mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-            
-            std::size_t elem_count = data_.getSize() / sizeof(Pair);
-            std::size_t pair_per_page = ::sysconf(_SC_PAGESIZE) / sizeof(Pair);
-            std::size_t index_count = elem_count / pair_per_page + (elem_count % pair_per_page ? 1 : 0);
-            
-            File index(index_path, O_RDWR, mode);
-            IVector vec_i(index_count,  Allocator<Index>(index.getFd()));
+        void setIndex(const std::string& index_path) { 
+            File index(index_path, O_RDWR, DEFAULT_FILE_MODE);
+            IVector vec_i(index_count_,  Allocator<Index>(index.getFd()));
         
+            index_count_ = index.getSize() / sizeof(Index);
+            
             index_      = std::move(vec_i);
             index_file_ = std::move(index);
         }
 
         std::optional<Data> search(uint64_t hash_key) {
+            if (index_count_ == -1) {
+                throw std::runtime_error("Index file doesn't exist");
+            }
             Index ind;
             ind.key = hash_key;
            
-
             auto it = std::upper_bound(index_.begin(), index_.end(), ind, [](const Index& x, const Index& y) -> bool {
                 return x.key < y.key;
             });
@@ -288,14 +279,9 @@ class DataStorage {
                 it == index_.end();
             }
 
-            std::size_t elem_count = data_.getSize() / sizeof(Pair);
-
-
-            std::size_t pair_per_page = ::sysconf(_SC_PAGESIZE) / sizeof(Pair);
-            std::size_t offset = (--it)->offset;
-            std::size_t rest =  elem_count - (offset / sizeof(Pair));
-            std::size_t elem_offset = offset / sizeof(Pair);
-            std::size_t elem = rest < pair_per_page ? rest : pair_per_page;
+            std::size_t elem_offset = (--it)->offset / sizeof(Pair);
+            std::size_t rest =  elem_count_ - elem_offset;
+            std::size_t elem = rest < elem_per_page_ ? rest : elem_per_page_;
 
             Pair p;
             p.key = hash_key;
@@ -313,6 +299,10 @@ class DataStorage {
         }
 
     private:
+        std::size_t elem_count_;
+        std::size_t elem_per_page_;
+        long long index_count_ = -1;
+
         File index_file_;
         IVector index_;
 

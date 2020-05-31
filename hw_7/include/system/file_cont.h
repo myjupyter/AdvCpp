@@ -4,7 +4,6 @@
 #include <sys/mman.h>
 #include <vector>
 
-
 template<typename T>
 class Allocator {
     public:
