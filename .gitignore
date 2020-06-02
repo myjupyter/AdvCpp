@@ -1,8 +1,11 @@
 *.out
 *.so
 *.log
+*.dat
 
 CMakeCache.txt
 cmake_install.cmake 
 CMakeFiles/
+data
+.gdb_history
 Makefile
